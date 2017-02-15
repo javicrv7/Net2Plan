@@ -19,9 +19,10 @@ public class WindowController
     private static GUIWindow offlineWindow;
     private static GUIWindow onlineWindow;
     private static GUIWindow whatifWindow;
+    private static GUIWindow visualizationFiltersWindow;
 
     // WindowToTab.network must always be the first one.
-    private final static WindowToTab[] tabCorrectOrder = {WindowToTab.network, WindowToTab.offline, WindowToTab.online, WindowToTab.whatif , WindowToTab.report};
+    private final static WindowToTab[] tabCorrectOrder = {WindowToTab.network, WindowToTab.offline, WindowToTab.online, WindowToTab.whatif , WindowToTab.report, WindowToTab.filters};
 
     public static void buildTableControlWindow(final JComponent component)
     {
@@ -216,6 +217,40 @@ public class WindowController
         }
     }
 
+    public static void buildFiltersWindow(final JComponent component)
+    {
+        final String tabName = WindowToTab.getTabName(WindowToTab.filters);
+
+        visualizationFiltersWindow = new GUIWindow()
+        {
+            @Override
+            public String getTitle()
+            {
+                return "Net2Plan - " + tabName;
+            }
+        };
+
+        visualizationFiltersWindow.addWindowListener(new CloseWindowAdapter(tabName, component));
+
+        visualizationFiltersWindow.buildWindow(component);
+    }
+
+    public static void showFiltersWindow(final boolean gainFocus)
+    {
+        if (visualizationFiltersWindow != null)
+        {
+            if (gainFocus)
+            {
+                visualizationFiltersWindow.showWindow();
+            } else
+            {
+                visualizationFiltersWindow.setFocusableWindowState(false);
+                visualizationFiltersWindow.showWindow();
+                visualizationFiltersWindow.setFocusableWindowState(true);
+            }
+        }
+    }
+
     private static class CloseWindowAdapter extends WindowAdapter
     {
         private final String tabName;
@@ -240,13 +275,15 @@ public class WindowController
         offline(WindowToTab.offlineWindowName),
         online(WindowToTab.onlineWindowName),
         whatif(WindowToTab.whatifWindowName),
-        report(WindowToTab.reportWindowName);
+        report(WindowToTab.reportWindowName),
+        filters(WindowToTab.visualizationFiltersName);
 
         private final static String networkWindowName = "View/Edit network state";
         private final static String offlineWindowName = "Offline algorithms";
         private final static String onlineWindowName = "Online simulation";
         private final static String whatifWindowName = "What-if analysis";
         private final static String reportWindowName = "View reports";
+        private final static String visualizationFiltersName = "Visualization Filters";
 
         private final String text;
 
@@ -269,6 +306,8 @@ public class WindowController
                     return whatif;
                 case WindowToTab.reportWindowName:
                     return report;
+                case WindowToTab.visualizationFiltersName:
+                    return filters;
             }
 
             return null;
@@ -288,6 +327,8 @@ public class WindowController
                     return WindowToTab.whatifWindowName;
                 case report:
                     return WindowToTab.reportWindowName;
+                case filters:
+                    return WindowToTab.visualizationFiltersName;
             }
 
             return null;

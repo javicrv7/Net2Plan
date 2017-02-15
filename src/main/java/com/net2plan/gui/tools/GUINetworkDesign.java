@@ -35,6 +35,7 @@ import javax.swing.*;
 import javax.swing.border.LineBorder;
 
 import com.net2plan.gui.utils.viewEditWindows.parent.GUIWindow;
+import com.net2plan.gui.utils.visualizationFilters.VisualizationFiltersPane;
 import org.apache.commons.collections15.BidiMap;
 import org.apache.commons.collections15.bidimap.DualHashBidiMap;
 
@@ -98,6 +99,7 @@ public class GUINetworkDesign extends IGUIModule implements IVisualizationCallba
     private OfflineExecutionPanel executionPane;
     private OnlineSimulationPane onlineSimulationPane;
     private WhatIfAnalysisPane whatIfAnalysisPane;
+    private VisualizationFiltersPane visualizationFiltersPane;
 
     private VisualizationState vs;
     private UndoRedoManager undoRedoManager;
@@ -211,6 +213,7 @@ public class GUINetworkDesign extends IGUIModule implements IVisualizationCallba
         onlineSimulationPane = new OnlineSimulationPane(this);
         executionPane = new OfflineExecutionPanel(this);
         whatIfAnalysisPane = new WhatIfAnalysisPane(this);
+        visualizationFiltersPane = new VisualizationFiltersPane(this);
 
         // Closing windows
         WindowUtils.clearFloatingWindows();
@@ -221,6 +224,7 @@ public class GUINetworkDesign extends IGUIModule implements IVisualizationCallba
         tabPane.add(WindowController.WindowToTab.getTabName(WindowController.WindowToTab.online), onlineSimulationPane);
         tabPane.add(WindowController.WindowToTab.getTabName(WindowController.WindowToTab.whatif), whatIfAnalysisPane);
         tabPane.add(WindowController.WindowToTab.getTabName(WindowController.WindowToTab.report), reportPane);
+        tabPane.add(WindowController.WindowToTab.getTabName(WindowController.WindowToTab.filters), visualizationFiltersPane);
 
         // Installing customized mouse listener
         MouseListener[] ml = tabPane.getListeners(MouseListener.class);
@@ -287,6 +291,10 @@ public class GUINetworkDesign extends IGUIModule implements IVisualizationCallba
                                     case report:
                                         WindowController.buildReportWindow(selectedComponent);
                                         WindowController.showReportWindow(true);
+                                        break;
+                                    case filters:
+                                        WindowController.buildFiltersWindow(selectedComponent);
+                                        WindowController.showFiltersWindow(true);
                                         break;
                                     default:
                                         return;
@@ -734,6 +742,9 @@ public class GUINetworkDesign extends IGUIModule implements IVisualizationCallba
 
         whatIfAnalysisPane.setInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW, this.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW));
         whatIfAnalysisPane.setActionMap(this.getActionMap());
+
+        visualizationFiltersPane.setInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW, this.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW));
+        visualizationFiltersPane.setActionMap(this.getActionMap());
     }
 
     @Override

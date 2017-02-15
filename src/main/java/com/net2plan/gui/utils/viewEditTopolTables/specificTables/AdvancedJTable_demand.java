@@ -46,6 +46,8 @@ import javax.swing.JScrollPane;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 
+import com.net2plan.gui.utils.visualizationFilters.VisualizationFiltersController;
+import com.net2plan.interfaces.networkDesign.*;
 import org.apache.commons.collections15.BidiMap;
 
 import com.google.common.collect.Sets;
@@ -60,13 +62,6 @@ import com.net2plan.gui.utils.WiderJComboBox;
 import com.net2plan.gui.utils.viewEditTopolTables.ITableRowFilter;
 import com.net2plan.gui.utils.viewEditTopolTables.tableVisualizationFilters.TBFToFromCarriedTraffic;
 import com.net2plan.gui.utils.whatIfAnalysisPane.WhatIfAnalysisPane;
-import com.net2plan.interfaces.networkDesign.Demand;
-import com.net2plan.interfaces.networkDesign.Link;
-import com.net2plan.interfaces.networkDesign.Net2PlanException;
-import com.net2plan.interfaces.networkDesign.NetPlan;
-import com.net2plan.interfaces.networkDesign.NetworkLayer;
-import com.net2plan.interfaces.networkDesign.Node;
-import com.net2plan.interfaces.networkDesign.Route;
 import com.net2plan.internal.Constants.NetworkElementType;
 import com.net2plan.internal.ErrorHandling;
 import com.net2plan.utils.Constants.RoutingType;
@@ -116,6 +111,7 @@ public class AdvancedJTable_demand extends AdvancedJTable_NetworkElement
     		"Number of associated routes (in parenthesis, the number out of them that are designated as backup routes)", "Maximum end-to-end propagation time in miliseconds (accumulating any lower layer propagation times if any)", "Demand-specific attributes");
 
     private NetPlan currentTopology = null;
+    private VisualizationFiltersController filtersController = VisualizationFiltersController.getController();
 //    private final String[] resourceTypes = StringUtils.arrayOf("Firewall","NAT","CPU","RAM");
     /**
      * Default constructor.
@@ -156,6 +152,7 @@ public class AdvancedJTable_demand extends AdvancedJTable_NetworkElement
         int accum_numSCs = 0;
         int accum_numRoutes = 0; int accum_numBackupRoutes = 0;
         double accum_worstCasePropDelayMs = 0;
+        Set<NetworkElement> visibleDemands = filtersController.getVisibleNetworkElements(currentState,Demand.class);
         for (Demand demand : rowVisibleDemands)
         {
         	final Set<Route> routes_thisDemand = isSourceRouting ? demand.getRoutes() : new LinkedHashSet<Route>();
@@ -188,6 +185,7 @@ public class AdvancedJTable_demand extends AdvancedJTable_NetworkElement
                     demandData[i] = demand.getAttribute(attributesColumns.get(i-netPlanViewTableHeader.length));
                 }
             }
+            if(visibleDemands.contains(demand) || visibleDemands == null)
             allDemandData.add(demandData);
         }
         
