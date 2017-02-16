@@ -152,7 +152,6 @@ public class AdvancedJTable_demand extends AdvancedJTable_NetworkElement
         int accum_numSCs = 0;
         int accum_numRoutes = 0; int accum_numBackupRoutes = 0;
         double accum_worstCasePropDelayMs = 0;
-        Set<NetworkElement> visibleDemands = filtersController.getVisibleNetworkElements(currentState,Demand.class);
         for (Demand demand : rowVisibleDemands)
         {
         	final Set<Route> routes_thisDemand = isSourceRouting ? demand.getRoutes() : new LinkedHashSet<Route>();
@@ -185,7 +184,6 @@ public class AdvancedJTable_demand extends AdvancedJTable_NetworkElement
                     demandData[i] = demand.getAttribute(attributesColumns.get(i-netPlanViewTableHeader.length));
                 }
             }
-            if(visibleDemands.contains(demand) || visibleDemands == null)
             allDemandData.add(demandData);
         }
         
