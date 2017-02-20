@@ -107,7 +107,8 @@ public class ClassPathEditor {
                     StringBuilder classpath = new StringBuilder();
                     int numRows = MODEL.getRowCount();
                     for (int i = 0; i < numRows; i++) {
-                        if (i == row) continue;
+                        if (i == row)
+                            SystemUtils.removeFromClassPath(i);
 
                         if (classpath.length() > 0) classpath.append(";");
                         String path = (String) MODEL.getValueAt(i, 0);
@@ -138,6 +139,7 @@ public class ClassPathEditor {
                     while (MODEL.getRowCount() > 0)
                         MODEL.removeRow(0);
 
+                    SystemUtils.clearClasspath();
                     resetTable();
                 } catch (Throwable ex) {
                     ErrorHandling.addErrorOrException(ex);
@@ -161,7 +163,7 @@ public class ClassPathEditor {
     private static void refresh() {
         resetTable();
 
-        Set<URL> userClasspath = SystemUtils.getUserClasspath();
+        Set<URL> userClasspath = SystemUtils.getCurrentClasspath();
         if (!userClasspath.isEmpty()) {
             URI currentPath = SystemUtils.getCurrentDir().toURI();
             MODEL.removeRow(0);
@@ -186,7 +188,7 @@ public class ClassPathEditor {
     }
 
     private static void resetTable() {
-        MODEL.setDataVector(new Object[1][], StringUtils.arrayOf("Path"));
+        MODEL.setDataVector(new Object[1][1], StringUtils.arrayOf("Path"));
         TABLE.setEnabled(false);
 
         REMOVE_SELECTED.setEnabled(false);

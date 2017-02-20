@@ -36,12 +36,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Locale;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
@@ -55,7 +50,7 @@ public class SystemUtils
 {
 	private static Class mainClass;
 	private static UserInterface ui = null;
-	private static Set<URL> defaultClasspath;
+	private static Set<URL> defaultClasspath, currentClasspath;
 
 	/**
 	 * Adds a given file to the classpath.
@@ -73,11 +68,17 @@ public class SystemUtils
 			URL url = f.toURI().toURL();
 			ClassLoader cl = ClassLoader.getSystemClassLoader();
 			addURL.invoke(cl, new Object[] { url });
+			currentClasspath.add(url);
 		}
 		catch (NoSuchMethodException | SecurityException | MalformedURLException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e)
 		{
 			throw new RuntimeException(e);
 		}
+	}
+
+	public static void clearClasspath()
+	{
+		currentClasspath.clear();
 	}
 	
 	/**
@@ -156,6 +157,7 @@ public class SystemUtils
 		}
 		
 		defaultClasspath = getClasspath();
+		currentClasspath = getUserClasspath();
 		
 		/* Load options */
 		try { Configuration.readFromOptionsDefaultFile();  }
@@ -176,16 +178,26 @@ public class SystemUtils
 		ClassLoader cl = ClassLoader.getSystemClassLoader();
 		Set<URL> classpath = new TreeSet<URL>(new URLComparator());
 		classpath.addAll(Arrays.asList(((URLClassLoader) cl).getURLs()));
-		
-		return Collections.unmodifiableSet(classpath);
+		return classpath;
 	}
-	
+
+	/**
+	 * Returns the current classpath
+	 *
+	 * @return currentClasspath
+	 */
+
+	public static Set<URL> getCurrentClasspath()
+	{
+		return currentClasspath;
+	}
 	/**
 	 * Returns the current directory where the application is executing in.
 	 *
 	 * @return Current directory where the application is executing in
 	 * @since 0.2.0
 	 */
+
 	public static File getCurrentDir()
 	{
 		try
@@ -281,8 +293,7 @@ public class SystemUtils
 		Set<URL> classpath = new TreeSet<URL>(new URLComparator());
 		classpath.addAll(getClasspath());
 		classpath.removeAll(defaultClasspath);
-		
-		return Collections.unmodifiableSet(classpath);
+		return classpath;
 	}
 
 	/**
@@ -295,7 +306,36 @@ public class SystemUtils
 	{
 		return ui;
 	}
-	
+
+	/**
+	 * Updates the changes that have been made in classpath
+	 */
+	public static void updateUserClasspath()
+	{
+
+	}
+	/**
+	 * Removes a URL from classpath
+	 *
+	 * @param index index of the URL to be removed
+	 * @throws URISyntaxException
+	 */
+
+	public static void removeFromClassPath(int index) throws URISyntaxException
+	{
+		URL urlToRemove = null;
+		int counter = 0;
+		for(URL u : currentClasspath)
+		{
+			if(counter == index)
+				urlToRemove = u;
+			else{
+				counter++;
+			}
+		}
+		currentClasspath.remove(urlToRemove);
+	}
+
 	private static class URLComparator implements Comparator<URL>
 	{
 		@Override
