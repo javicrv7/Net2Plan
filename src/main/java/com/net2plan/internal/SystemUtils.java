@@ -76,6 +76,9 @@ public class SystemUtils
 		}
 	}
 
+	/**
+	 * Clear the hold classpath
+	 */
 	public static void clearClasspath()
 	{
 		currentClasspath.clear();
