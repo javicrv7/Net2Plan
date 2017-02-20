@@ -293,7 +293,7 @@ public class SystemUtils
 		Set<URL> classpath = new TreeSet<URL>(new URLComparator());
 		classpath.addAll(getClasspath());
 		classpath.removeAll(defaultClasspath);
-		return classpath;
+		return Collections.unmodifiableSet(classpath);
 	}
 
 	/**
