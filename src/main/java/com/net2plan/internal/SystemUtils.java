@@ -296,7 +296,7 @@ public class SystemUtils
 		Set<URL> classpath = new TreeSet<URL>(new URLComparator());
 		classpath.addAll(getClasspath());
 		classpath.removeAll(defaultClasspath);
-		return Collections.unmodifiableSet(classpath);
+		return classpath;
 	}
 
 	/**
@@ -320,23 +320,25 @@ public class SystemUtils
 	/**
 	 * Removes a URL from classpath
 	 *
-	 * @param index index of the URL to be removed
+	 * @param url url to be removed from classpath
 	 * @throws URISyntaxException
 	 */
 
-	public static void removeFromClassPath(int index) throws URISyntaxException
-	{
+	public static void removeFromClassPath(String url) throws URISyntaxException {
 		URL urlToRemove = null;
-		int counter = 0;
-		for(URL u : currentClasspath)
-		{
-			if(counter == index)
+		String urlOK = url.replace(File.separator, "/");
+		System.out.println("URL que se quiere borrar:  " + urlOK);
+		for (URL u : currentClasspath) {
+			System.out.println("URL que se comprueba:  " + u.toString());
+			if (u.toString().equals(urlOK))
+			{
+				System.out.println("Son iguales");
 				urlToRemove = u;
-			else{
-				counter++;
 			}
 		}
-		currentClasspath.remove(urlToRemove);
+
+		if(urlToRemove != null)
+			currentClasspath.remove(urlToRemove);
 	}
 
 	private static class URLComparator implements Comparator<URL>

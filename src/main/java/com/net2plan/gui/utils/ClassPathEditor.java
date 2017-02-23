@@ -108,7 +108,7 @@ public class ClassPathEditor {
                     int numRows = MODEL.getRowCount();
                     for (int i = 0; i < numRows; i++) {
                         if (i == row)
-                            SystemUtils.removeFromClassPath(i);
+                            SystemUtils.removeFromClassPath((String) MODEL.getValueAt(i, 0));
 
                         if (classpath.length() > 0) classpath.append(";");
                         String path = (String) MODEL.getValueAt(i, 0);
