@@ -293,13 +293,13 @@ public class NetworkLayer extends NetworkElement
 			throw new ClosedCycleRoutingException("Closed routing cycle for demand " + demand); 
 		
 		/* update the demand carried traffic */
-		demand.carriedTraffic = demand.offeredTraffic * M.get(demand.ingressNode.index , demand.egressNode.index) * s_egressNode;
+		demand.carriedTraffic = demand.getOfferedTraffic() * M.get(demand.ingressNode.index , demand.egressNode.index) * s_egressNode;
 		if (demand.coupledUpperLayerLink != null) demand.coupledUpperLayerLink.capacity = demand.carriedTraffic;
 
-		if (demand.carriedTraffic > demand.offeredTraffic + 1E-5) throw new RuntimeException ("Bad");
+		if (demand.carriedTraffic > demand.getOfferedTraffic() + 1E-5) throw new RuntimeException ("Bad");
 		
 		/* update the carried traffic of this demand in each link */
-		final double h_d = demand.offeredTraffic;
+		final double h_d = demand.getOfferedTraffic();
 		for (Link link : links)
 		{
 			final double oldXde = layer.forwardingRulesCurrentFailureState_x_de.get (demand.index , link.index);

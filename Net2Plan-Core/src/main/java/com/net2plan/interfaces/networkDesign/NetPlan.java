@@ -565,7 +565,7 @@ public class NetPlan extends NetworkElement
             this.addLink(nodes.get(originLink.originNode.index), nodes.get(originLink.destinationNode.index), originLink.capacity, originLink.lengthInKm, originLink.propagationSpeedInKmPerSecond, originLink.attributes, newLayer);
         for (Demand originDemand : origin.demands)
         {
-            Demand newDemand = this.addDemand(nodes.get(originDemand.ingressNode.index), nodes.get(originDemand.egressNode.index), originDemand.offeredTraffic, originDemand.attributes, newLayer);
+            Demand newDemand = this.addDemand(nodes.get(originDemand.ingressNode.index), nodes.get(originDemand.egressNode.index), originDemand.getOfferedTraffic(), originDemand.attributes, newLayer);
             newDemand.setServiceChainSequenceOfTraversedResourceTypes(originDemand.getServiceChainSequenceOfTraversedResourceTypes());
         }
         for (MulticastDemand originDemand : origin.multicastDemands)
@@ -1973,7 +1973,7 @@ public class NetPlan extends NetworkElement
 
             for (Demand originDemand : originLayer.demands)
             {
-                Demand newElement = new Demand(this, originDemand.id, originDemand.index, newLayer, this.cache_id2NodeMap.get(originDemand.ingressNode.id), this.cache_id2NodeMap.get(originDemand.egressNode.id), originDemand.offeredTraffic, originDemand.attributes);
+                Demand newElement = new Demand(this, originDemand.id, originDemand.index, newLayer, this.cache_id2NodeMap.get(originDemand.ingressNode.id), this.cache_id2NodeMap.get(originDemand.egressNode.id), originDemand.getOfferedTraffic(), originDemand.attributes);
                 for (String tag : originDemand.getTags ()) newElement.addTag (tag);
                 newElement.mandatorySequenceOfTraversedResourceTypes = new LinkedList<String>(originDemand.mandatorySequenceOfTraversedResourceTypes);
                 cache_id2DemandMap.put(originDemand.id, newElement);
@@ -3077,7 +3077,7 @@ public class NetPlan extends NetworkElement
         int N = nodes.size();
         DoubleMatrix2D trafficMatrix = DoubleFactory2D.dense.make(N, N);
         for (Demand d : layer.demands)
-            trafficMatrix.setQuick(d.ingressNode.index, d.egressNode.index, trafficMatrix.get(d.ingressNode.index, d.egressNode.index) + d.offeredTraffic);
+            trafficMatrix.setQuick(d.ingressNode.index, d.egressNode.index, trafficMatrix.get(d.ingressNode.index, d.egressNode.index) + d.getOfferedTraffic());
         return trafficMatrix;
     }
 
@@ -4229,7 +4229,7 @@ public class NetPlan extends NetworkElement
     {
         NetworkLayer layer = checkInThisNetPlanOptionalLayerParameter(optionalLayerParameter);
         DoubleMatrix1D res = DoubleFactory1D.dense.make(layer.demands.size());
-        for (Demand e : layer.demands) res.set(e.index, e.offeredTraffic);
+        for (Demand e : layer.demands) res.set(e.index, e.getOfferedTraffic());
         return res;
     }
 
@@ -4243,7 +4243,7 @@ public class NetPlan extends NetworkElement
     {
         NetworkLayer layer = checkInThisNetPlanOptionalLayerParameter(optionalLayerParameter);
         DoubleMatrix1D res = DoubleFactory1D.dense.make(layer.demands.size());
-        for (Demand e : layer.demands) res.set(e.index, Math.max(0, e.offeredTraffic - e.carriedTraffic));
+        for (Demand e : layer.demands) res.set(e.index, Math.max(0, e.getOfferedTraffic() - e.carriedTraffic));
         return res;
     }
 
@@ -4528,7 +4528,7 @@ public class NetPlan extends NetworkElement
         for (Node n : nodes)
         {
             double traf = 0;
-            for (Demand d : n.cache_nodeOutgoingDemands) if (d.layer == layer) traf += d.offeredTraffic;
+            for (Demand d : n.cache_nodeOutgoingDemands) if (d.layer == layer) traf += d.getOfferedTraffic();
             res.set(n.index, traf);
         }
         return res;
@@ -4547,7 +4547,7 @@ public class NetPlan extends NetworkElement
         for (Node n : nodes)
         {
             double traf = 0;
-            for (Demand d : n.cache_nodeIncomingDemands) if (d.layer == layer) traf += d.offeredTraffic;
+            for (Demand d : n.cache_nodeIncomingDemands) if (d.layer == layer) traf += d.getOfferedTraffic();
             res.set(n.index, traf);
         }
         return res;
@@ -4673,7 +4673,7 @@ public class NetPlan extends NetworkElement
         NetworkLayer layer = checkInThisNetPlanOptionalLayerParameter(optionalLayerParameter);
         layer.checkRoutingType(RoutingType.SOURCE_ROUTING);
         DoubleMatrix1D res = DoubleFactory1D.dense.make(layer.routes.size());
-        for (Route e : layer.routes) res.set(e.index, e.demand.offeredTraffic);
+        for (Route e : layer.routes) res.set(e.index, e.demand.getOfferedTraffic());
         return res;
     }
 
@@ -5596,7 +5596,7 @@ public class NetPlan extends NetworkElement
                     writer.writeAttribute("id", Long.toString(demand.id));
                     writer.writeAttribute("ingressNodeId", Long.toString(demand.ingressNode.id));
                     writer.writeAttribute("egressNodeId", Long.toString(demand.egressNode.id));
-                    writer.writeAttribute("offeredTraffic", Double.toString(demand.offeredTraffic));
+                    writer.writeAttribute("offeredTraffic", Double.toString(demand.getOfferedTraffic()));
                     writer.writeAttribute("intendedRecoveryType", demand.recoveryType.toString());
 
                     for (String type : demand.mandatorySequenceOfTraversedResourceTypes)
@@ -6744,7 +6744,7 @@ public class NetPlan extends NetworkElement
 
                 for (Demand demand : layer.demands)
                 {
-                    String demandInformation = String.format("d%d (id %d), n%d (%s) -> n%d (%s), offered traffic: %.3g, carried: %.3g, attributes: %s", demand.index, demand.id, demand.ingressNode.id, demand.ingressNode.name, demand.egressNode.id, demand.egressNode.name, demand.offeredTraffic, demand.carriedTraffic, demand.attributes.isEmpty() ? "none" : demand.attributes);
+                    String demandInformation = String.format("d%d (id %d), n%d (%s) -> n%d (%s), offered traffic: %.3g, carried: %.3g, attributes: %s", demand.index, demand.id, demand.ingressNode.id, demand.ingressNode.name, demand.egressNode.id, demand.egressNode.name, demand.getOfferedTraffic(), demand.carriedTraffic, demand.attributes.isEmpty() ? "none" : demand.attributes);
                     netPlanInformation.append(demandInformation);
 
                     if (demand.coupledUpperLayerLink != null)
@@ -7118,7 +7118,7 @@ public class NetPlan extends NetworkElement
                             linkInitialNodeOutRules += layer.forwardingRulesNoFailureState_f_de.get(d, out_a_e);
                         }
                         final boolean linkUp = link.isUp && link.originNode.isUp && link.destinationNode.isUp;
-                        double linkInitialNodeInTraffic = (link.originNode == demand.ingressNode) ? demand.offeredTraffic : 0;
+                        double linkInitialNodeInTraffic = (link.originNode == demand.ingressNode) ? demand.getOfferedTraffic() : 0;
                         for (Link inLink : a_e.getIncomingLinks(layer))
                             linkInitialNodeInTraffic += layer.forwardingRulesCurrentFailureState_x_de.get(d, inLink.index);
                         if (linkInitialNodeOutRules > 1 + 1E-3) throw new RuntimeException("Bad");

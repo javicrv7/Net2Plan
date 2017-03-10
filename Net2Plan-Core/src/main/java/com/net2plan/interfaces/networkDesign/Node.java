@@ -223,7 +223,7 @@ public class Node extends NetworkElement
 	{
 		checkAttachedToNetPlanObject();
 		NetworkLayer layer = netPlan.checkInThisNetPlanOptionalLayerParameter(optionalLayerParameter);
-		double accum = 0; for (Demand d : cache_nodeIncomingDemands) if (d.layer.equals (layer)) accum += d.offeredTraffic;
+		double accum = 0; for (Demand d : cache_nodeIncomingDemands) if (d.layer.equals (layer)) accum += d.getOfferedTraffic();
 		return accum;
 	}
 
@@ -264,7 +264,7 @@ public class Node extends NetworkElement
 	{
 		checkAttachedToNetPlanObject();
 		NetworkLayer layer = netPlan.checkInThisNetPlanOptionalLayerParameter(optionalLayerParameter);
-		double accum = 0; for (Demand d : cache_nodeOutgoingDemands) if (d.layer.equals (layer)) accum += d.offeredTraffic;
+		double accum = 0; for (Demand d : cache_nodeOutgoingDemands) if (d.layer.equals (layer)) accum += d.getOfferedTraffic();
 		return accum;
 	}
 

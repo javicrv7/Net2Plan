@@ -12,14 +12,21 @@
 
 package com.net2plan.interfaces.networkDesign;
 
-import cern.colt.list.tdouble.DoubleArrayList;
-import cern.colt.list.tint.IntArrayList;
-import cern.colt.matrix.tdouble.DoubleFactory1D;
-import cern.colt.matrix.tdouble.DoubleFactory2D;
-import cern.colt.matrix.tdouble.DoubleMatrix1D;
-import cern.colt.matrix.tdouble.DoubleMatrix2D;
-import cern.colt.matrix.tdouble.algo.DenseDoubleAlgebra;
-import cern.jet.math.tdouble.DoublePlusMultSecond;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
+
 import com.net2plan.internal.AttributeMap;
 import com.net2plan.internal.ErrorHandling;
 import com.net2plan.libraries.GraphUtils;
@@ -28,10 +35,15 @@ import com.net2plan.utils.Constants.RoutingType;
 import com.net2plan.utils.DoubleUtils;
 import com.net2plan.utils.Pair;
 import com.net2plan.utils.Quadruple;
-import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import cern.colt.list.tdouble.DoubleArrayList;
+import cern.colt.list.tint.IntArrayList;
+import cern.colt.matrix.tdouble.DoubleFactory1D;
+import cern.colt.matrix.tdouble.DoubleFactory2D;
+import cern.colt.matrix.tdouble.DoubleMatrix1D;
+import cern.colt.matrix.tdouble.DoubleMatrix2D;
+import cern.colt.matrix.tdouble.algo.DenseDoubleAlgebra;
+import cern.jet.math.tdouble.DoublePlusMultSecond;
 
 /** <p>This class contains a representation of a unicast demand. Unicast demands are defined by its initial and end node, the network layer they belong to, 
  * and their offered traffic. When the routing in the network layer is the type {@link com.net2plan.utils.Constants.RoutingType#SOURCE_ROUTING SOURCE_ROUTING}, demands are carried
@@ -51,9 +63,11 @@ public class Demand extends NetworkElement
 	final NetworkLayer layer;
 	final Node ingressNode;
 	final Node egressNode;
-	double offeredTraffic;
+	private double offeredTraffic;
 	double carriedTraffic;
 	RoutingCycleType routingCycleType;
+	Set<Demand> immediateUpstreamDemands; // demands putting traffic in me, and the fraction of carried traffic that put in me
+	Map<Demand,Double> immediateDownstreamDemands; // demands putting traffic in me, and the fraction of carried traffic that put in me
 	
 	Set<Route> cache_routes;
 	Link coupledUpperLayerLink;
@@ -377,13 +391,156 @@ public class Demand extends NetworkElement
 		return coupledUpperLayerLink != null;
 	}
 
+	public boolean isAggregatedDemand () { return !this.immediateUpstreamDemands.isEmpty(); }
+	
+	public boolean isPuttingTrafficInAggregatedDemands () { return !this.immediateDownstreamDemands.isEmpty(); }
+
+	/** For aggregated demands, returns a map with all the demands that put traffic in me, and the fraction of the carried traffic of that demand 
+	 * that I would be aggregating, if no traffic was blocked in the network. For non-aggregated demadns, returns an empty map
+	 * @return see above
+	 */
+	public Map<Demand,Double> getAllUpstreamDemands ()
+	{
+		final Map<Demand,Double> res = new HashMap<> ();
+		for (Demand immUpstream : this.immediateUpstreamDemands)
+		{
+			final double fractionThisImmUpstreamDemandInMe = immUpstream.immediateDownstreamDemands.get(this);
+			final Map<Demand,Double> propagateUp = immUpstream.getAllUpstreamDemands();
+			for (Entry<Demand,Double> upperDemandNotImmediateInfo : propagateUp.entrySet())
+			{
+				final Demand upperDemandNotImmediate = upperDemandNotImmediateInfo.getKey();
+				final double upperDemandNotImmediateFractionInMe = fractionThisImmUpstreamDemandInMe * upperDemandNotImmediateInfo.getValue();
+				Double currentEffectDemandInMe = res.get(upperDemandNotImmediate);
+				final double newEffectDemandInMe = (upperDemandNotImmediateFractionInMe + (currentEffectDemandInMe != null? currentEffectDemandInMe : 0.0));
+				res.put(upperDemandNotImmediate, newEffectDemandInMe);
+			}
+		}
+		return res;
+	}
+	
+	/** For demands putting traffic in aggregated demands, returns a map with all the demands that have my traffic as it propagates 
+	 * downstream, and the traffic that this demand is putting in that (appears as offered traffic to that demand).
+	 * For demands not putting traffic in an aggreagated demand, returns an empty map
+	 * @return see above
+	 */
+	public Map<Demand,Double> getAllDownStreamDemands ()
+	{
+		final Map<Demand,Double> res = new HashMap<> ();
+		for (Entry<Demand,Double> immDownstreamEntry : this.immediateDownstreamDemands.entrySet())
+		{
+			final Demand immediateDownstreamDemand = immDownstreamEntry.getKey();
+			final double fractionMeInThisImmDownDemand = immDownstreamEntry.getValue();
+			res.put(immediateDownstreamDemand , this.carriedTraffic * fractionMeInThisImmDownDemand);
+			final Map<Demand,Double> propagateDown = immediateDownstreamDemand.getAllDownStreamDemands();
+			for (Entry<Demand,Double> downstreamNotImmDemandInfo : propagateDown.entrySet())
+			{
+				final Demand downDemandNotImmediate = downstreamNotImmDemandInfo.getKey();
+				final double downDemandNotImmediateFractionIPutThere = fractionMeInThisImmDownDemand * downstreamNotImmDemandInfo.getValue();
+				Double currentMeInDemand = res.get(downDemandNotImmediate);
+				final double newEffectMeInDemand = (downDemandNotImmediateFractionIPutThere + (currentMeInDemand != null? currentMeInDemand : 0.0));
+				res.put(downDemandNotImmediate, newEffectMeInDemand);
+			}
+		}
+		return res;
+	}
+	/** For demands putting traffic in aggregated demands, returns a map with all the demands that have my traffic as it propagates 
+	 * downstream, and the traffic that this demand is putting in that (appears as offered traffic to that demand).
+	 * For demands not putting traffic in an aggreagated demand, returns an empty map
+	 * @return see above
+	 */
+	private void getAllDownStreamDemands (double offeredTrafficAmountIAmInterested , Map<Demand,Double> downstreamDemandsSoFar)
+	{
+		final double thisOfferedTraffic = this.getOfferedTraffic();
+		if (offeredTrafficAmountIAmInterested > thisOfferedTraffic) throw new RuntimeException ();
+		final double myBlockingProbability = 1 - (this.carriedTraffic / thisOfferedTraffic);
+		for (Entry<Demand,Double> immDownstreamEntry : this.immediateDownstreamDemands.entrySet())
+		{
+			final Demand immediateDownstreamDemand = immDownstreamEntry.getKey();
+			final double carriedTrafficAddedToImmDownstream = offeredTrafficAmountIAmInterested * myBlockingProbability * immDownstreamEntry.getValue();
+			res.put(immediateDownstreamDemand , carriedTrafficAddedToImmDownstream + (res.get(immediateDownstreamDemand) == null? 0 : res.get(immediateDownstreamDemand)));
+			final Map<Demand,Double> propagateDown = immediateDownstreamDemand.getAllDownStreamDemands();
+			for (Entry<Demand,Double> downstreamNotImmDemandInfo : propagateDown.entrySet())
+			{
+				final Demand downDemandNotImmediate = downstreamNotImmDemandInfo.getKey();
+				final double downDemandNotImmediateTrafficIPutThere = offeredTrafficAmountIAmInterested * fractionMeInThisImmDownDemand * downstreamNotImmDemandInfo.getValue();
+				Double currentMeInDemand = res.get(downDemandNotImmediate);
+				final double newEffectMeInDemand = (downDemandNotImmediateFractionIPutThere + (currentMeInDemand != null? currentMeInDemand : 0.0));
+				res.put(downDemandNotImmediate, newEffectMeInDemand);
+			}
+		}
+	}
+
+	
+	
+	public Map<Demand,Double> getImmediateUpstreamDemands () 
+	{
+		final Map<Demand,Double> res = new HashMap<> ();
+		for (Demand upstreamDemand : this.immediateUpstreamDemands)
+			res.put(upstreamDemand, upstreamDemand.getImmediateDownstreamDemands().get(this));
+		return res;
+	}
+	public Map<Demand,Double> getImmediateDownstreamDemands () { return Collections.unmodifiableMap(this.immediateDownstreamDemands); }
+
+	
+	/** Attach this demand to the given demands. The fractions should sum 1, all the aggregated demands should have zero offered traffic
+	 * and not be aggregated to anything. If aggregatedDemand2FractionMap is null, the existing attachment is removed */
+	public void attachToAggregatedDemands (Map<Demand,Double> newDownstreamAggregationDemandMap)
+	{
+		checkAttachedToNetPlanObject();
+		netPlan.checkIsModifiable();
+		if (newDownstreamAggregationDemandMap != null)
+		{
+	        if (this.isCoupled()) throw new Net2PlanException ("Demands putting traffic in an aggregated demand");
+			/* check fractions sum 1 and non-negative */
+			double sumFractions = 0; for (Double val : newDownstreamAggregationDemandMap.values()) if (val < 0) throw new Net2PlanException ("Fractions cannot be negative"); else sumFractions += val;
+			if (Math.abs(sumFractions - 1) > Configuration.precisionFactor) throw new Net2PlanException ("The fractions should sum one");
+			/* check downstream demands are in this layer, not removed, not coupled */
+			for (Demand d : newDownstreamAggregationDemandMap.keySet()) 
+			{
+				d.checkAttachedToNetPlanObject(this.netPlan);
+		        netPlan.checkInThisNetPlanAndLayer(d, this.layer);
+		        if (d.isCoupled()) throw new Net2PlanException ("Aggregated demands cannot be coupled");
+			}
+			
+			/* check there are no cycles */
+			
+		}
+		/* Store the set of immediate downstream demands affected by this change */
+		final Set<Demand> immediateDownstreamAffectedDemands = new HashSet<> (); 
+		immediateDownstreamAffectedDemands.addAll(this.immediateDownstreamDemands.keySet());
+		immediateDownstreamAffectedDemands.addAll(newDownstreamAggregationDemandMap.keySet());
+		
+		/* remove existing attachments of other demands attached to me */
+		for (Demand downstreamDemand : this.immediateDownstreamDemands.keySet())
+			downstreamDemand.immediateUpstreamDemands.remove(this);
+		this.immediateDownstreamDemands.clear(); // now I am not an aggregated demand
+
+		if (newDownstreamAggregationDemandMap == null) return;
+		
+		/* add new attachments to downstream demands */
+		this.immediateDownstreamDemands.putAll(newDownstreamAggregationDemandMap);
+		for (Demand downstreamDemand : this.immediateDownstreamDemands.keySet())
+			downstreamDemand.immediateUpstreamDemands.add(this);
+		
+		if (!layer.isSourceRouting())
+			for (Demand downstreamDemand : immediateDownstreamAffectedDemands)
+			
+
+		
+	}
+	
 	/**
-	 * Returns the offered traffic of the demand
+	 * Returns the offered traffic of the demand. If the demand is an aggregated demand, takes the carried traffic of the 
+	 * direct upstream demands, weighted by the fraction that is forwarded to this demand
 	 * @return The offered traffic
 	 */
 	public double getOfferedTraffic()
 	{
-		return offeredTraffic;
+		if (immediateUpstreamDemands.isEmpty ()) return offeredTraffic;
+		double res = 0;
+		for (Demand upstreamDemand : immediateUpstreamDemands)
+			res += upstreamDemand.getCarriedTraffic() * upstreamDemand.getImmediateDownstreamDemands().get(this);
+		return res;
 	}
 
 	/**
