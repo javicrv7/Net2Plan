@@ -5608,6 +5608,14 @@ public class NetPlan extends NetworkElement
 
                     for (String tag : demand.tags) { XMLUtils.indent(writer, 3); writer.writeEmptyElement("tag"); writer.writeAttribute("value", tag); }
 
+                    for (Entry<Demand,Double> entryDownstream : demand.immediateDownstreamDemands.entrySet())
+                    { 
+                        XMLUtils.indent(writer, 3);
+                        writer.writeEmptyElement("downstreamDemandInfo");
+                        writer.writeAttribute("downDemandId", "" + entryDownstream.getKey().getId());
+                        writer.writeAttribute("fraction", "" + entryDownstream.getValue());
+                    }
+
                     for (Entry<String, String> entry : demand.attributes.entrySet())
                     {
                         XMLUtils.indent(writer, 3);
@@ -5950,7 +5958,8 @@ public class NetPlan extends NetworkElement
 
 //		System.out.println ("affected routes: " + affectedRoutesSourceRouting);
         for (NetworkLayer affectedLayer : affectedLayersHopByHopRouting)
-            for (Demand d : affectedLayer.demands) d.layer.updateHopByHopRoutingDemand(d);
+            for (Demand d : affectedLayer.demands) 
+            	if (!d.isAggregatedDemand()) d.layer.updateHopByHopRoutingDemand(d , true); // aggregated demands are updated implicitly already
         netPlan.updateFailureStateRoutesAndTrees(affectedRoutesSourceRouting);
         netPlan.updateFailureStateRoutesAndTrees(affectedTrees);
 
@@ -6011,7 +6020,7 @@ public class NetPlan extends NetworkElement
         layer.forwardingRulesNoFailureState_f_de.set(demand.index, link.index, splittingRatio);
         try
         {
-            layer.updateHopByHopRoutingDemand(demand);
+            layer.updateHopByHopRoutingDemand(demand , true);
         } catch (Exception e)
         {
             layer.forwardingRulesNoFailureState_f_de.set(demand.index, link.index, oldSplittingRatio);
@@ -6076,7 +6085,7 @@ public class NetPlan extends NetworkElement
         }
 
         for (Demand demand : modifiedDemands)
-            layer.updateHopByHopRoutingDemand(demand);
+            layer.updateHopByHopRoutingDemand(demand , true);
         if (ErrorHandling.isDebugEnabled()) this.checkCachesConsistency();
     }
 
@@ -6112,7 +6121,8 @@ public class NetPlan extends NetworkElement
             throw new Net2PlanException("The sum of the splitting factors of the output links of a node cannot exceed one");
 
         layer.forwardingRulesNoFailureState_f_de = f_de;
-        for (Demand d : layer.demands) layer.updateHopByHopRoutingDemand(d);
+        /* update all demands: dont call update for aggregated demands, since they are updated by its upstream */
+        for (Demand d : layer.demands) if (!d.isAggregatedDemand()) layer.updateHopByHopRoutingDemand(d , true); 
         if (ErrorHandling.isDebugEnabled()) this.checkCachesConsistency();
     }
 
@@ -6414,7 +6424,8 @@ public class NetPlan extends NetworkElement
                 }
                 /* update link and demand carried traffics, and demand routing cycle type */
                 layer.forwardingRulesCurrentFailureState_x_de.assign(0); // this is recomputed inside next call
-                for (Demand d : layer.demands) layer.updateHopByHopRoutingDemand(d);
+                for (Demand d : layer.demands) if (!d.isAggregatedDemand()) layer.updateHopByHopRoutingDemand(d , true);
+                // if a demand is aggregated, it is updated by its upstream
 
                 break;
             }
@@ -6503,11 +6514,10 @@ public class NetPlan extends NetworkElement
         if (offeredTrafficVector.size() != layer.demands.size()) throw new Net2PlanException("Wrong veector size");
         if (offeredTrafficVector.size() > 0) if (offeredTrafficVector.getMinLocation()[0] < 0)
             throw new Net2PlanException("Offered traffic must be greater or equal than zero");
+        if (layer.demands.stream().filter(d->d.isAggregatedDemand()).findFirst().isPresent()) 
+            throw new Net2PlanException("The offered traffic of an aggregated demand cannot be set");
         for (Demand d : layer.demands)
-        {
-            d.offeredTraffic = offeredTrafficVector.get(d.index);
-            if (layer.routingType == RoutingType.HOP_BY_HOP_ROUTING) layer.updateHopByHopRoutingDemand(d);
-        }
+            d.setOfferedTraffic(offeredTrafficVector.get(d.index));
         if (ErrorHandling.isDebugEnabled()) this.checkCachesConsistency();
     }
 

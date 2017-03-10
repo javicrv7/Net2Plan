@@ -23,7 +23,10 @@ import com.net2plan.utils.Quadruple;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
+
+import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 
 /** <p>This class contains a representation of a network layer. This is an structure which contains a set of demands, multicast demands and links. 
  * It also is characterized by a routing type, which can be {@link com.net2plan.utils.Constants.RoutingType#SOURCE_ROUTING SOURCE_ROUTING}, or
@@ -253,9 +256,9 @@ public class NetworkLayer extends NetworkElement
 	}
 
 	/* Updates all the network state, to the new situation where the hop-by-hop routing of a demand has changed */
-	void updateHopByHopRoutingDemand (Demand demand)
+	void updateHopByHopRoutingDemand (Demand demand , boolean propagateToDownStreamDemands)
 	{
-		NetworkLayer layer = demand.layer;
+		final NetworkLayer layer = demand.layer;
 		if (layer != this) throw new RuntimeException ("Bad");
 
 //		System.out.println ("updateHopByHopRoutingDemand demand: " + demand + ", cache links down: " + cache_linksDown);
@@ -311,6 +314,17 @@ public class NetworkLayer extends NetworkElement
 			if ((newXde > 1e-3) && (!link.isUp)) throw new RuntimeException ("Bad");
 		}
 
+		if (propagateToDownStreamDemands)
+		{
+			final DirectedAcyclicGraph<Demand, Object> downstreamDemands = demand.getDownstreamDemandsTree();
+			final Iterator<Demand> iteratorOrderedDemandUpdate = downstreamDemands.iterator();
+			while (iteratorOrderedDemandUpdate.hasNext())
+			{
+				final Demand d = iteratorOrderedDemandUpdate.next();
+				if (d != demand) this.updateHopByHopRoutingDemand(d , false);
+			}
+		}
+		
 //		System.out.println ("updateHopByHopRoutingDemand demand: " + demand + ", this demand x_e: " + forwardingRules_x_de.viewRow(demand.index));
 	}
 

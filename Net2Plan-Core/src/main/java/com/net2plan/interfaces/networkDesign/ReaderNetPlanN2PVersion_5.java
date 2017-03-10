@@ -38,6 +38,7 @@ class ReaderNetPlanN2PVersion_5 implements IReaderNetPlan //extends NetPlanForma
 	private boolean hasAlreadyReadOneLayer;
 	private XMLStreamReader2 xmlStreamReader;
 	private Map<Route,List<Long>> backupRouteIdsMap;
+	private Map<Demand,Map<Long,Double>> newDemand2DownstreamInfoMap;
 	private Map<Long , List<Pair<Node,URL>>> nodeAndLayerToIconURLMap;
 	
 	
@@ -46,6 +47,7 @@ class ReaderNetPlanN2PVersion_5 implements IReaderNetPlan //extends NetPlanForma
 		this.hasAlreadyReadOneLayer = false;
 		this.xmlStreamReader = xmlStreamReader;
 		this.backupRouteIdsMap = new HashMap<Route,List<Long>> ();
+		this.newDemand2DownstreamInfoMap = new HashMap<> ();
 		this.nodeAndLayerToIconURLMap = new HashMap<> ();
 		parseNetwork(netPlan);
 
@@ -172,6 +174,7 @@ class ReaderNetPlanN2PVersion_5 implements IReaderNetPlan //extends NetPlanForma
 
 		Demand newDemand = netPlan.addDemand(demandId , netPlan.getNodeFromId(ingressNodeId), netPlan.getNodeFromId(egressNodeId), offeredTraffic, null , netPlan.getNetworkLayerFromId(layerId));
 		newDemand.setIntendedRecoveryType(recoveryType);
+		newDemand2DownstreamInfoMap.put(newDemand, new HashMap<> ());
 		
 		List<String> mandatorySequenceOfTraversedResourceTypes = new LinkedList<String> ();
 		boolean finalElementRead = false;
@@ -194,6 +197,13 @@ class ReaderNetPlanN2PVersion_5 implements IReaderNetPlan //extends NetPlanForma
 							newDemand.setAttribute(key, name);
 							break;
 
+						case "downstreamDemandInfo":
+							final long downDemandId = Long.parseLong(xmlStreamReader.getAttributeValue(xmlStreamReader.getAttributeIndex(null, "downDemandId")));
+							final double fraction = Double.parseDouble(xmlStreamReader.getAttributeValue(xmlStreamReader.getAttributeIndex(null, "fraction")));
+							newDemand2DownstreamInfoMap.get(newDemand).put(downDemandId, fraction);
+							break;
+
+							
 						case "serviceChainResourceTypeOfSequence":
 							String type = xmlStreamReader.getAttributeValue(xmlStreamReader.getAttributeIndex(null, "type"));
 							mandatorySequenceOfTraversedResourceTypes.add(type);
@@ -458,6 +468,7 @@ class ReaderNetPlanN2PVersion_5 implements IReaderNetPlan //extends NetPlanForma
 	{
 		netPlan.setRoutingType (RoutingType.SOURCE_ROUTING , netPlan.getNetworkLayerFromId(layerId));
 		this.backupRouteIdsMap.clear(); // in multiple layers, we have to refresh this
+		this.newDemand2DownstreamInfoMap.clear(); 
 		
 		while(xmlStreamReader.hasNext())
 		{
@@ -487,6 +498,15 @@ class ReaderNetPlanN2PVersion_5 implements IReaderNetPlan //extends NetPlanForma
 						{
 							final Route primary = entry.getKey();
 							for (long backupId : entry.getValue()) primary.addBackupRoute(netPlan.getRouteFromId(backupId));
+						}
+						/* Before returning, we add the downstream information */
+						for (Entry<Demand,Map<Long,Double>> entry : this.newDemand2DownstreamInfoMap.entrySet())
+						{
+							final Demand d = entry.getKey();
+							final Map<Long,Double> downMap = entry.getValue();
+							final Map<Demand,Double> downMapTranslated = new HashMap<> ();
+							for (Entry<Long,Double> entryDown : downMap.entrySet()) downMapTranslated.put(netPlan.getDemandFromId(entryDown.getKey()), entryDown.getValue());
+							d.attachToAggregatedDemands(downMapTranslated);
 						}
 						return;
 					}

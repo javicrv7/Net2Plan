@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -24,6 +25,7 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.net2plan.interfaces.TestConstants;
+import com.net2plan.libraries.IPUtils;
 import com.net2plan.utils.Constants.RoutingType;
 import com.net2plan.utils.Pair;
 
@@ -57,7 +59,13 @@ public class NetPlanTest
 	private MulticastDemand upperMd123;
 	private MulticastTree upperMt123;
 
-
+	private NetPlan npAgg;
+	private Node nagg1, nagg2 , nagg3 , nagg4, nagg5, nagg6;
+	private Link linka13, linka23, linka34 , linka45 , linka46;
+	private Demand da13, da23 , da34 , da45, da46;
+	
+	
+	
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception
 	{
@@ -150,6 +158,28 @@ public class NetPlanTest
 		this.netTriangle_r2 = netTriangle.addResource("type2" , "name" , netTriangle_n2 , 100.0 , "units" , null , 1.0 , null);
 		this.netTriangle_r3 = netTriangle.addResource("type3" , "name" , netTriangle_n3 , 100.0 , "units" , null , 1.0 , null);
 
+		this.npAgg = new NetPlan ();
+		this.npAgg.setRoutingType(RoutingType.HOP_BY_HOP_ROUTING);
+		this.nagg1 = this.npAgg.addNode(0 , 0 , "" , null);
+		this.nagg2 = this.npAgg.addNode(0 , 0 , "" , null);
+		this.nagg3 = this.npAgg.addNode(0 , 0 , "" , null);
+		this.nagg4 = this.npAgg.addNode(0 , 0 , "" , null);
+		this.nagg5 = this.npAgg.addNode(0 , 0 , "" , null);
+		this.nagg6 = this.npAgg.addNode(0 , 0 , "" , null);
+		this.linka13 = npAgg.addLink(nagg1,nagg3,100,100,1,null);
+		this.linka23 = npAgg.addLink(nagg2,nagg3,100,100,1,null);
+		this.linka34 = npAgg.addLink(nagg3,nagg4,100,100,1,null);
+		this.linka45 = npAgg.addLink(nagg4,nagg5,100,100,1,null);
+		this.linka46 = npAgg.addLink(nagg4,nagg6,100,100,1,null);
+		this.da13 = npAgg.addDemand(nagg1 , nagg3 , 10 , null);
+		this.da23 = npAgg.addDemand(nagg2 , nagg3 , 10 , null);
+		this.da34 = npAgg.addDemand(nagg3 , nagg4 , 0 , null);
+		this.da45 = npAgg.addDemand(nagg4 , nagg5 , 0 , null);
+		this.da46 = npAgg.addDemand(nagg4 , nagg6 , 0 , null);
+		this.da13.attachToAggregatedDemands(ImmutableMap.of (da34 , 1.0));
+		this.da23.attachToAggregatedDemands(ImmutableMap.of (da34 , 1.0));
+		this.da34.attachToAggregatedDemands(ImmutableMap.of (da45 , 0.4 , da46 , 0.6));
+		
 		File resourcesDir = new File(TestConstants.TEST_FILE_DIRECTORY);
 		if (!resourcesDir.exists()) resourcesDir.mkdirs();
 	}
@@ -166,6 +196,170 @@ public class NetPlanTest
 		this.np = new NetPlan ();
 	}
 
+	@Test
+	public void testIsAggregatedDemand()
+	{
+		assertTrue(!da13.isAggregatedDemand());
+		assertTrue(!da23.isAggregatedDemand());
+		assertTrue(da34.isAggregatedDemand());
+		assertTrue(da45.isAggregatedDemand());
+		assertTrue(da46.isAggregatedDemand());
+	}
+
+	@Test
+	public void testIsPuttingTrafficInAggregatedDemands()
+	{
+		assertTrue(da13.isPuttingTrafficInAggregatedDemands());
+		assertTrue(da23.isPuttingTrafficInAggregatedDemands());
+		assertTrue(da34.isPuttingTrafficInAggregatedDemands());
+		assertTrue(!da45.isPuttingTrafficInAggregatedDemands());
+		assertTrue(!da46.isPuttingTrafficInAggregatedDemands());
+	}
+
+	@Test
+	public void testGetAllUpstreamDemandsTree()
+	{
+		DirectedAcyclicGraph<Demand, Object> res = new DirectedAcyclicGraph<Demand, Object> (Object.class);
+		assertEquals(da13.getUpstreamDemandsTree().vertexSet() , res.vertexSet());
+		assertEquals(da23.getUpstreamDemandsTree().vertexSet() , res.vertexSet());
+		res.addVertex(da34);
+		res.addVertex(da13);
+		res.addVertex(da23);
+		assertEquals(da34.getUpstreamDemandsTree().vertexSet() , res.vertexSet());
+		res.addVertex(da45);
+		assertEquals(da45.getUpstreamDemandsTree().vertexSet() , res.vertexSet());
+		res.removeVertex(da45);
+		res.addVertex(da46);
+		assertEquals(da46.getUpstreamDemandsTree().vertexSet() , res.vertexSet());
+	}
+
+	@Test
+	public void testGetAllDownstreamDemandsTree()
+	{
+		DirectedAcyclicGraph<Demand, Object> res = new DirectedAcyclicGraph<Demand, Object> (Object.class);
+		assertEquals(da46.getDownstreamDemandsTree().vertexSet() , res.vertexSet());
+		assertEquals(da45.getDownstreamDemandsTree().vertexSet() , res.vertexSet());
+		res.addVertex(da34);
+		res.addVertex(da45);
+		res.addVertex(da46);
+		assertEquals(da34.getDownstreamDemandsTree().vertexSet() , res.vertexSet());
+		res.addVertex(da13);
+		assertEquals(da13.getDownstreamDemandsTree().vertexSet() , res.vertexSet());
+		res.removeVertex(da13);
+		res.addVertex(da23);
+		assertEquals(da23.getDownstreamDemandsTree().vertexSet() , res.vertexSet());
+	}
+
+	@Test
+	public void testGetAllDownstreamDemands()
+	{
+		assertEquals(da13.getAllDownStreamDemands() , Sets.newHashSet(da34 , da45, da46));
+		assertEquals(da23.getAllDownStreamDemands() , Sets.newHashSet(da34 , da45, da46));
+		assertEquals(da34.getAllDownStreamDemands() , Sets.newHashSet(da45 , da46));
+		assertEquals(da45.getAllDownStreamDemands() , Sets.newHashSet());
+		assertEquals(da46.getAllDownStreamDemands() , Sets.newHashSet());
+	}
+
+	@Test
+	public void testGetAllUpstreamDemands()
+	{
+		assertEquals(da13.getAllUpstreamDemands() , Sets.newHashSet());
+		assertEquals(da23.getAllUpstreamDemands() , Sets.newHashSet());
+		assertEquals(da34.getAllUpstreamDemands() , Sets.newHashSet(da13 , da23));
+		assertEquals(da45.getAllUpstreamDemands() , Sets.newHashSet(da34,da13,da23));
+		assertEquals(da46.getAllUpstreamDemands() , Sets.newHashSet(da34,da13,da23));
+	}
+
+	@Test
+	public void testGetImmediateUpstreamDemands()
+	{
+		assertEquals(da13.getImmediateUpstreamDemands() , ImmutableMap.of());
+		assertEquals(da23.getImmediateUpstreamDemands() , ImmutableMap.of());
+		assertEquals(da34.getImmediateUpstreamDemands() , ImmutableMap.of(da13 , 1.0 , da23 , 1.0));
+		assertEquals(da45.getImmediateUpstreamDemands() , ImmutableMap.of(da34 , 0.4));
+		assertEquals(da46.getImmediateUpstreamDemands() , ImmutableMap.of(da34 , 0.6));
+	}
+
+	@Test
+	public void testGetImmediateDownstreamDemands()
+	{
+		assertEquals(da13.getImmediateDownstreamDemands() , ImmutableMap.of(da34 , 1.0));
+		assertEquals(da23.getImmediateDownstreamDemands() , ImmutableMap.of(da34 , 1.0));
+		assertEquals(da34.getImmediateDownstreamDemands() , ImmutableMap.of(da45 , 0.4 , da46 , 0.6));
+		assertEquals(da45.getImmediateDownstreamDemands() , ImmutableMap.of());
+		assertEquals(da46.getImmediateDownstreamDemands() , ImmutableMap.of());
+	}
+
+	@Test
+	public void testDemandAggregationVarious()
+	{
+		/* Check loops */
+		try { da46.attachToAggregatedDemands(ImmutableMap.of(da13 , 1.0)); fail (); } catch (Exception e) {} 
+		try { da46.attachToAggregatedDemands(ImmutableMap.of(da34 , 1.0)); fail (); } catch (Exception e) {} 
+		try { da46.attachToAggregatedDemands(ImmutableMap.of(da46 , 1.0)); fail (); } catch (Exception e) {} 
+
+		/* Check must sum one */
+		try { da34.attachToAggregatedDemands(ImmutableMap.of(da45 , 1.0 , da46 , 1.0)); fail (); } catch (Exception e) {} 
+
+		/* Check we can deattach */
+		da34.attachToAggregatedDemands(null);
+		assertEquals(da34.getImmediateDownstreamDemands() , ImmutableMap.of());
+		assertEquals(da45.getImmediateUpstreamDemands() , ImmutableMap.of());
+		da34.attachToAggregatedDemands(ImmutableMap.of(da45 , 0.4 , da46 , 0.6)); 
+		
+		/* check the traffic */
+		da13.setOfferedTraffic(5);
+		da23.setOfferedTraffic(5);
+		assertEquals(da34.getOfferedTraffic(), 0 , 0);
+		assertEquals(da45.getOfferedTraffic(), 0 , 0);
+		assertEquals(da46.getOfferedTraffic(), 0 , 0);
+		assertEquals(da34.getCarriedTraffic(), 0 , 0);
+		assertEquals(da45.getCarriedTraffic(), 0 , 0);
+		assertEquals(da46.getCarriedTraffic(), 0 , 0);
+		
+		IPUtils.setECMPForwardingRulesFromLinkWeights(npAgg, null);
+		assertEquals(da34.getOfferedTraffic(), 10 , 0);
+		assertEquals(da45.getOfferedTraffic(), 4 , 0);
+		assertEquals(da46.getOfferedTraffic(), 6 , 0);
+		assertEquals(da34.getCarriedTraffic(), 10 , 0);
+		assertEquals(da45.getCarriedTraffic(), 4 , 0);
+		assertEquals(da46.getCarriedTraffic(), 6 , 0);
+
+		da13.setOfferedTraffic(50);
+		da23.setOfferedTraffic(50);
+		assertEquals(da34.getOfferedTraffic(), 100 , 0);
+		assertEquals(da45.getOfferedTraffic(), 40 , 0);
+		assertEquals(da46.getOfferedTraffic(), 60 , 0);
+		assertEquals(da34.getCarriedTraffic(), 100 , 0);
+		assertEquals(da45.getCarriedTraffic(), 40 , 0);
+		assertEquals(da46.getCarriedTraffic(), 60 , 0);
+		
+		linka34.setFailureState(false);
+		assertEquals(da13.getOfferedTraffic(), 50 , 0);
+		assertEquals(da23.getOfferedTraffic(), 50 , 0);
+		assertEquals(da34.getOfferedTraffic(), 100 , 0);
+		assertEquals(da45.getOfferedTraffic(), 0 , 0);
+		assertEquals(da46.getOfferedTraffic(), 0 , 0);
+		assertEquals(da13.getCarriedTraffic(), 50 , 0);
+		assertEquals(da23.getCarriedTraffic(), 50 , 0);
+		assertEquals(da34.getCarriedTraffic(), 0 , 0);
+		assertEquals(da45.getCarriedTraffic(), 0 , 0);
+		assertEquals(da46.getCarriedTraffic(), 0 , 0);
+		
+		linka34.setFailureState(true);
+		assertEquals(da13.getOfferedTraffic(), 50 , 0);
+		assertEquals(da23.getOfferedTraffic(), 50 , 0);
+		assertEquals(da34.getOfferedTraffic(), 100 , 0);
+		assertEquals(da45.getOfferedTraffic(), 40 , 0);
+		assertEquals(da46.getOfferedTraffic(), 60 , 0);
+		assertEquals(da13.getCarriedTraffic(), 50 , 0);
+		assertEquals(da23.getCarriedTraffic(), 50 , 0);
+		assertEquals(da34.getCarriedTraffic(), 100 , 0);
+		assertEquals(da45.getCarriedTraffic(), 40 , 0);
+		assertEquals(da46.getCarriedTraffic(), 60 , 0);
+	}
+
+	
 	@Test
 	public void testGetSiteNames ()
 	{
