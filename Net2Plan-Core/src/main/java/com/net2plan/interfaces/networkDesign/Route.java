@@ -554,6 +554,10 @@ public class Route extends NetworkElement
 		demand.carriedTraffic = 0; for (Route r : demand.cache_routes) demand.carriedTraffic += r.getCarriedTraffic();
 		if (demand.coupledUpperLayerLink != null) demand.coupledUpperLayerLink.capacity = demand.carriedTraffic;
 		
+		/* propagate down the new carried traffic */
+		for (Entry<Demand,Double> downstramInfo : demand.immediateDownstreamDemands.entrySet())
+			downstramInfo.getKey()._updateOfferedTraffic(demand.carriedTraffic * downstramInfo.getValue());
+		
 		if (ErrorHandling.isDebugEnabled()) netPlan.checkCachesConsistency();
 	}
 	

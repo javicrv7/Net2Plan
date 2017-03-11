@@ -852,19 +852,60 @@ public class Demand extends NetworkElement
 	 * <p>Sets the offered traffic by a demand. If routing type is {@link com.net2plan.utils.Constants.RoutingType#HOP_BY_HOP_ROUTING HOP_BY_HOP_ROUTING}, the carried traffic for each link is updated according to the forwarding rules.
 	 * In {@link com.net2plan.utils.Constants.RoutingType#SOURCE_ROUTING SOURCE_ROUTING}, the routes carried traffic is not updated. If 
 	 * the demand is a downstream aggregated demand, an exception is raised</p>
-	 * @param offeredTraffic The new offered traffic (must be non-negative)
+	 * @param newOfferedTraffic The new offered traffic (must be non-negative)
 	 */
-	public void setOfferedTraffic(double offeredTraffic)
+	public void setOfferedTraffic(double newOfferedTraffic)
 	{
-		offeredTraffic = NetPlan.adjustToTolerance(offeredTraffic);
+		newOfferedTraffic = NetPlan.adjustToTolerance(newOfferedTraffic);
 		netPlan.checkIsModifiable();
-		if (offeredTraffic < 0) throw new Net2PlanException("Offered traffic must be greater or equal than zero");
+		if (newOfferedTraffic < 0) throw new Net2PlanException("Offered traffic must be greater or equal than zero");
 		if (this.isAggregatedDemand()) throw new Net2PlanException("The offered traffic of an aggregated demand cannot be set");
-		this.offeredTraffic = offeredTraffic;
-		if (layer.routingType == RoutingType.HOP_BY_HOP_ROUTING) layer.updateHopByHopRoutingDemand(this , true);
-		if (ErrorHandling.isDebugEnabled()) netPlan.checkCachesConsistency();
+		_updateOfferedTraffic(newOfferedTraffic);
 	}
 
+	/* Updates the offered traffic, and propagates to downstream demands */
+	void _updateOfferedTraffic(double newOfferedTraffic)
+	{
+		if (this.offeredTraffic == newOfferedTraffic) return;
+		final double oldOfferedTraffic = this.offeredTraffic;
+		this.offeredTraffic = newOfferedTraffic;
+		if (layer.isSourceRouting()) return; 
+			
+		/* hop by hop routing case */
+		if (oldOfferedTraffic == 0)
+		{
+			layer.updateHopByHopRoutingDemand (this , false); // needs fund matrix computation etc
+		}
+		else
+		{
+			/* just multiply the traffic in the links and the carried traffic */
+			final double multiplicationFactor = newOfferedTraffic / oldOfferedTraffic;
+			this.carriedTraffic *= multiplicationFactor;
+			for (Link link : layer.links)
+			{
+				final double oldXde = layer.forwardingRulesCurrentFailureState_x_de.get (this.index , link.index);
+				final double newXde = oldXde * multiplicationFactor;
+				layer.forwardingRulesCurrentFailureState_x_de.set (this.index , link.index , newXde);
+				link.cache_carriedTraffic += newXde - oldXde; // in hop-by-hop carried traffic is the same as occupied capacity
+				link.cache_occupiedCapacity += newXde - oldXde;
+				if ((newXde > 1e-3) && (!link.isUp)) throw new RuntimeException ("Bad");
+			}
+		}
+
+//		final DirectedAcyclicGraph<Demand, Object> downstreamDemands = this.getDownstreamDemandsTree();
+//		final Iterator<Demand> iteratorOrderedDemandUpdate = downstreamDemands.iterator();
+//		while (iteratorOrderedDemandUpdate.hasNext())
+//		{
+//			final Demand d = iteratorOrderedDemandUpdate.next();
+//			System.out.println("Demand " + d + " offered traffic " + d.getOfferedTraffic());
+//			if (d != this) this._updateOfferedTraffic(d.getOfferedTraffic());
+//		}
+
+		for (Demand downstreamDemand : this.immediateDownstreamDemands.keySet())
+			downstreamDemand._updateOfferedTraffic(downstreamDemand.getOfferedTraffic());
+		if (ErrorHandling.isDebugEnabled()) netPlan.checkCachesConsistency();
+	}
+	
 	
 	/**
 	 * <p>Returns a {@code String} representation of the demand.</p>
@@ -1004,4 +1045,5 @@ public class Demand extends NetworkElement
 	}
 	
 
+	
 }

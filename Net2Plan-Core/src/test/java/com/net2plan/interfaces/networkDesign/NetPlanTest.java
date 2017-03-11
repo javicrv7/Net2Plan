@@ -324,15 +324,30 @@ public class NetPlanTest
 		assertEquals(da34.getCarriedTraffic(), 10 , 0);
 		assertEquals(da45.getCarriedTraffic(), 4 , 0);
 		assertEquals(da46.getCarriedTraffic(), 6 , 0);
+		assertEquals(linka34.getCarriedTraffic(), 10 , 0);
+		assertEquals(linka46.getCarriedTraffic(), 6 , 0);
+		assertEquals(linka45.getCarriedTraffic(), 4 , 0);
 
 		da13.setOfferedTraffic(50);
+		assertEquals(da34.getOfferedTraffic(), 55 , 0);
+		assertEquals(da46.getOfferedTraffic(), 55*0.6 , 0);
+		assertEquals(da45.getOfferedTraffic(), 55*0.4 , 0);
+		assertEquals(da34.getCarriedTraffic(), 55 , 0);
+		assertEquals(da46.getCarriedTraffic(), 55*0.6 , 0);
+		assertEquals(da45.getCarriedTraffic(), 55*0.4 , 0);
+		assertEquals(linka34.getCarriedTraffic(), 55 , 0);
+		assertEquals(linka46.getCarriedTraffic(), 55*0.6 , 0);
+		assertEquals(linka45.getCarriedTraffic(), 55*0.4 , 0);
 		da23.setOfferedTraffic(50);
 		assertEquals(da34.getOfferedTraffic(), 100 , 0);
-		assertEquals(da45.getOfferedTraffic(), 40 , 0);
 		assertEquals(da46.getOfferedTraffic(), 60 , 0);
+		assertEquals(da45.getOfferedTraffic(), 40 , 0);
 		assertEquals(da34.getCarriedTraffic(), 100 , 0);
 		assertEquals(da45.getCarriedTraffic(), 40 , 0);
 		assertEquals(da46.getCarriedTraffic(), 60 , 0);
+		assertEquals(linka34.getCarriedTraffic(), 100 , 0);
+		assertEquals(linka46.getCarriedTraffic(), 60 , 0);
+		assertEquals(linka45.getCarriedTraffic(), 40 , 0);
 		
 		linka34.setFailureState(false);
 		assertEquals(da13.getOfferedTraffic(), 50 , 0);
@@ -359,6 +374,89 @@ public class NetPlanTest
 		assertEquals(da46.getCarriedTraffic(), 60 , 0);
 	}
 
+	public void testDemandAggregationVariousSourceRouting ()
+	{
+		this.npAgg.setRoutingType(RoutingType.SOURCE_ROUTING);
+		/* Check loops */
+		try { da46.attachToAggregatedDemands(ImmutableMap.of(da13 , 1.0)); fail (); } catch (Exception e) {} 
+		try { da46.attachToAggregatedDemands(ImmutableMap.of(da34 , 1.0)); fail (); } catch (Exception e) {} 
+		try { da46.attachToAggregatedDemands(ImmutableMap.of(da46 , 1.0)); fail (); } catch (Exception e) {} 
+
+		/* Check must sum one */
+		try { da34.attachToAggregatedDemands(ImmutableMap.of(da45 , 1.0 , da46 , 1.0)); fail (); } catch (Exception e) {} 
+
+		/* Check we can deattach */
+		da34.attachToAggregatedDemands(null);
+		assertEquals(da34.getImmediateDownstreamDemands() , ImmutableMap.of());
+		assertEquals(da45.getImmediateUpstreamDemands() , ImmutableMap.of());
+		da34.attachToAggregatedDemands(ImmutableMap.of(da45 , 0.4 , da46 , 0.6)); 
+		
+		/* check the traffic */
+		da13.setOfferedTraffic(5);
+		da23.setOfferedTraffic(5);
+		assertEquals(da34.getOfferedTraffic(), 0 , 0);
+		assertEquals(da45.getOfferedTraffic(), 0 , 0);
+		assertEquals(da46.getOfferedTraffic(), 0 , 0);
+		assertEquals(da34.getCarriedTraffic(), 0 , 0);
+		assertEquals(da45.getCarriedTraffic(), 0 , 0);
+		assertEquals(da46.getCarriedTraffic(), 0 , 0);
+		
+		final Route ra13 = this.npAgg.addRoute(da13, 10, 10, Arrays.asList(linka13), null);
+		final Route ra23 = this.npAgg.addRoute(da23, 10, 10, Arrays.asList(linka13), null);
+		
+		assertEquals(da34.getOfferedTraffic(), 20 , 0);
+		assertEquals(da45.getOfferedTraffic(), 0 , 0);
+		assertEquals(da46.getOfferedTraffic(), 0 , 0);
+		assertEquals(da34.getCarriedTraffic(), 0 , 0);
+		assertEquals(da45.getCarriedTraffic(), 0 , 0);
+		assertEquals(da46.getCarriedTraffic(), 0 , 0);
+		assertEquals(linka34.getCarriedTraffic(), 0 , 0);
+		assertEquals(linka46.getCarriedTraffic(), 0 , 0);
+		assertEquals(linka45.getCarriedTraffic(), 0 , 0);
+
+		da13.setOfferedTraffic(50);
+		assertEquals(da34.getOfferedTraffic(), 20 , 0);
+		assertEquals(da45.getOfferedTraffic(), 0 , 0);
+		assertEquals(da46.getOfferedTraffic(), 0 , 0);
+		assertEquals(da34.getCarriedTraffic(), 0 , 0);
+		assertEquals(da45.getCarriedTraffic(), 0 , 0);
+		assertEquals(da46.getCarriedTraffic(), 0 , 0);
+		assertEquals(linka34.getCarriedTraffic(), 0 , 0);
+		assertEquals(linka46.getCarriedTraffic(), 0 , 0);
+		assertEquals(linka45.getCarriedTraffic(), 0 , 0);
+		da23.setOfferedTraffic(50);
+		assertEquals(da34.getOfferedTraffic(), 20 , 0);
+		assertEquals(da45.getOfferedTraffic(), 0 , 0);
+		assertEquals(da46.getOfferedTraffic(), 0 , 0);
+		assertEquals(da34.getCarriedTraffic(), 0 , 0);
+		assertEquals(da45.getCarriedTraffic(), 0 , 0);
+		assertEquals(da46.getCarriedTraffic(), 0 , 0);
+		assertEquals(linka34.getCarriedTraffic(), 0 , 0);
+		assertEquals(linka46.getCarriedTraffic(), 0 , 0);
+		assertEquals(linka45.getCarriedTraffic(), 0 , 0);
+		
+		linka13.setFailureState(false);
+		assertEquals(da34.getOfferedTraffic(), 10 , 0);
+		assertEquals(da45.getOfferedTraffic(), 0 , 0);
+		assertEquals(da46.getOfferedTraffic(), 0 , 0);
+		assertEquals(da34.getCarriedTraffic(), 0 , 0);
+		assertEquals(da45.getCarriedTraffic(), 0 , 0);
+		assertEquals(da46.getCarriedTraffic(), 0 , 0);
+		assertEquals(linka34.getCarriedTraffic(), 0 , 0);
+		assertEquals(linka46.getCarriedTraffic(), 0 , 0);
+		assertEquals(linka45.getCarriedTraffic(), 0 , 0);
+		
+		linka34.setFailureState(true);
+		assertEquals(da34.getOfferedTraffic(), 20 , 0);
+		assertEquals(da45.getOfferedTraffic(), 0 , 0);
+		assertEquals(da46.getOfferedTraffic(), 0 , 0);
+		assertEquals(da34.getCarriedTraffic(), 0 , 0);
+		assertEquals(da45.getCarriedTraffic(), 0 , 0);
+		assertEquals(da46.getCarriedTraffic(), 0 , 0);
+		assertEquals(linka34.getCarriedTraffic(), 0 , 0);
+		assertEquals(linka46.getCarriedTraffic(), 0 , 0);
+		assertEquals(linka45.getCarriedTraffic(), 0 , 0);
+	}
 	
 	@Test
 	public void testGetSiteNames ()

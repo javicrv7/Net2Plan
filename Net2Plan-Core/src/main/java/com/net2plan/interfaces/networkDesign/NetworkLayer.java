@@ -255,11 +255,11 @@ public class NetworkLayer extends NetworkElement
 		if (this.routingType != routingType) throw new Net2PlanException("Routing type of layer " + this + " must be " + routingType);
 	}
 
+	
 	/* Updates all the network state, to the new situation where the hop-by-hop routing of a demand has changed */
 	void updateHopByHopRoutingDemand (Demand demand , boolean propagateToDownStreamDemands)
 	{
-		final NetworkLayer layer = demand.layer;
-		if (layer != this) throw new RuntimeException ("Bad");
+		if (demand.layer != this) throw new RuntimeException ("Bad");
 
 //		System.out.println ("updateHopByHopRoutingDemand demand: " + demand + ", cache links down: " + cache_linksDown);
 
@@ -305,10 +305,10 @@ public class NetworkLayer extends NetworkElement
 		final double h_d = demand.getOfferedTraffic();
 		for (Link link : links)
 		{
-			final double oldXde = layer.forwardingRulesCurrentFailureState_x_de.get (demand.index , link.index);
+			final double oldXde = this.forwardingRulesCurrentFailureState_x_de.get (demand.index , link.index);
 			final double newXde = h_d * M.get (demand.ingressNode.index , link.originNode.index) * fowardingRulesThisFailureState_f_e.get (link.index);
 			if (newXde < -1E-5) throw new RuntimeException ("Bad");
-			layer.forwardingRulesCurrentFailureState_x_de.set (demand.index , link.index , newXde);
+			this.forwardingRulesCurrentFailureState_x_de.set (demand.index , link.index , newXde);
 			link.cache_carriedTraffic += newXde - oldXde; // in hop-by-hop carried traffic is the same as occupied capacity
 			link.cache_occupiedCapacity += newXde - oldXde;
 			if ((newXde > 1e-3) && (!link.isUp)) throw new RuntimeException ("Bad");
