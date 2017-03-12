@@ -13,6 +13,7 @@
 package com.net2plan.interfaces.networkDesign;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -64,7 +65,7 @@ public class Demand extends NetworkElement
 	final NetworkLayer layer;
 	final Node ingressNode;
 	final Node egressNode;
-	private double offeredTraffic;
+	double offeredTraffic;
 	double carriedTraffic;
 	RoutingCycleType routingCycleType;
 	Set<Demand> cache_immediateUpstreamDemands; // demands putting traffic in me, and the fraction of carried traffic that put in me
@@ -544,7 +545,7 @@ public class Demand extends NetworkElement
 				double newOfferedTrafficDownstreamDemand = 0;
 				for (Demand otherUpstreamDemand : downstreamDemand.cache_immediateUpstreamDemands)
 					newOfferedTrafficDownstreamDemand += otherUpstreamDemand.getCarriedTraffic() * otherUpstreamDemand.immediateDownstreamDemands.get(downstreamDemand); 
-				downstreamDemand._updateOfferedTraffic(newOfferedTrafficDownstreamDemand);
+				downstreamDemand._updateOfferedTrafficAndPotentiallyPropagateDownstream(newOfferedTrafficDownstreamDemand , true);
 			}	
 //	
 //			/* Update the traffic of the demands, with the removed downstream traffic */
@@ -570,7 +571,7 @@ public class Demand extends NetworkElement
 			double newOfferedTrafficDownstreamDemand = 0;
 			for (Demand otherUpstreamDemand : downstreamDemand.cache_immediateUpstreamDemands)
 				newOfferedTrafficDownstreamDemand += otherUpstreamDemand.getCarriedTraffic() * otherUpstreamDemand.immediateDownstreamDemands.get(downstreamDemand); 
-			downstreamDemand._updateOfferedTraffic(newOfferedTrafficDownstreamDemand);
+			downstreamDemand._updateOfferedTrafficAndPotentiallyPropagateDownstream(newOfferedTrafficDownstreamDemand , true);
 		}
 		
 //		if (!layer.isSourceRouting())
@@ -789,7 +790,10 @@ public class Demand extends NetworkElement
 		netPlan.checkIsModifiable();
 		layer.checkRoutingType(RoutingType.HOP_BY_HOP_ROUTING);
 		layer.forwardingRulesNoFailureState_f_de.viewRow (this.index).assign(0);
-		layer.updateHopByHopRoutingDemand(this  ,true);
+		if (this.isPuttingTrafficInAggregatedDemands())
+			layer.updateHopByHopRoutingDemandsConsideringPropagation(Arrays.asList(this));
+		else
+			layer.updateHopByHopRoutingDemandNotPropagation(this);
 		if (ErrorHandling.isDebugEnabled()) netPlan.checkCachesConsistency();
 	}
 
@@ -881,11 +885,11 @@ public class Demand extends NetworkElement
 		netPlan.checkIsModifiable();
 		if (newOfferedTraffic < 0) throw new Net2PlanException("Offered traffic must be greater or equal than zero");
 		if (this.isAggregatedDemand()) throw new Net2PlanException("The offered traffic of an aggregated demand cannot be set");
-		_updateOfferedTraffic(newOfferedTraffic);
+		_updateOfferedTrafficAndPotentiallyPropagateDownstream(newOfferedTraffic , true);
 	}
 
 	/* Updates the offered traffic, and propagates to downstream demands */
-	void _updateOfferedTraffic(double newOfferedTraffic)
+	void _updateOfferedTrafficAndPotentiallyPropagateDownstream(double newOfferedTraffic , boolean propagateDownstream)
 	{
 		if (this.offeredTraffic == newOfferedTraffic) return;
 		final double oldOfferedTraffic = this.offeredTraffic;
@@ -895,7 +899,7 @@ public class Demand extends NetworkElement
 		/* hop by hop routing case */
 		if (oldOfferedTraffic == 0)
 		{
-			layer.updateHopByHopRoutingDemand (this , false); // needs fund matrix computation etc
+			layer.updateHopByHopRoutingDemandNotPropagation(this); // needs fund matrix computation etc
 		}
 		else
 		{
@@ -921,9 +925,14 @@ public class Demand extends NetworkElement
 //			System.out.println("Demand " + d + " offered traffic " + d.getOfferedTraffic());
 //			if (d != this) this._updateOfferedTraffic(d.getOfferedTraffic());
 //		}
-
-		for (Demand downstreamDemand : this.immediateDownstreamDemands.keySet())
-			downstreamDemand._updateOfferedTraffic(downstreamDemand.getOfferedTraffic());
+		if (propagateDownstream)
+		{
+			for (Demand downstreamDemand : this.immediateDownstreamDemands.keySet())
+			{
+				double newOfferedTrafficOfDownstream = 0; for (Demand upstream : downstreamDemand.cache_immediateUpstreamDemands) newOfferedTrafficOfDownstream += upstream.carriedTraffic * upstream.immediateDownstreamDemands.get(downstreamDemand);
+				downstreamDemand._updateOfferedTrafficAndPotentiallyPropagateDownstream(newOfferedTrafficOfDownstream , true);
+			}
+		}
 		if (ErrorHandling.isDebugEnabled()) netPlan.checkCachesConsistency();
 	}
 	

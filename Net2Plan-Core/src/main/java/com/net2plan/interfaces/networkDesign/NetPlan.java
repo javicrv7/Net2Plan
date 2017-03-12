@@ -5958,14 +5958,15 @@ public class NetPlan extends NetworkElement
 
 //		System.out.println ("affected routes: " + affectedRoutesSourceRouting);
         for (NetworkLayer affectedLayer : affectedLayersHopByHopRouting)
-        {
-    		final Iterator<Demand> iterator = affectedLayer.getMultipleDemandsDownstreamTree(affectedLayer.demands).iterator();
-    		while (iterator.hasNext())
-    		{
-    			final Demand d = iterator.next();
-    			affectedLayer.updateHopByHopRoutingDemand(d , false);
-    		}
-        }
+        	affectedLayer.updateHopByHopRoutingDemandsConsideringPropagation(affectedLayer.demands);
+//        {
+//    		final Iterator<Demand> iterator = affectedLayer.getMultipleDemandsDownstreamTree(affectedLayer.demands).iterator();
+//    		while (iterator.hasNext())
+//    		{
+//    			final Demand d = iterator.next();
+//    			affectedLayer.updateHopByHopRoutingDemand(d , false);
+//    		}
+//        }
 //            for (Demand d : affectedLayer.demands) 
 //            	if (!d.isAggregatedDemand()) d.layer.updateHopByHopRoutingDemand(d , true); // aggregated demands are updated implicitly already
         netPlan.updateFailureStateRoutesAndTrees(affectedRoutesSourceRouting);
@@ -6028,7 +6029,7 @@ public class NetPlan extends NetworkElement
         layer.forwardingRulesNoFailureState_f_de.set(demand.index, link.index, splittingRatio);
         try
         {
-            layer.updateHopByHopRoutingDemand(demand , true);
+            layer.updateHopByHopRoutingDemandsConsideringPropagation(Arrays.asList(demand));
         } catch (Exception e)
         {
             layer.forwardingRulesNoFailureState_f_de.set(demand.index, link.index, oldSplittingRatio);
@@ -6093,13 +6094,14 @@ public class NetPlan extends NetworkElement
             throw new Net2PlanException("The sum of the splitting factors of the output links of a node cannot exceed one");
         }
 
-		final Iterator<Demand> iterator = layer.getMultipleDemandsDownstreamTree(modifiedDemands).iterator();
-		while (iterator.hasNext())
-		{
-			final Demand d = iterator.next();
-			layer.updateHopByHopRoutingDemand(d , false);
-		}
-
+        layer.updateHopByHopRoutingDemandsConsideringPropagation(modifiedDemands);
+//		final Iterator<Demand> iterator = layer.getMultipleDemandsDownstreamTree(modifiedDemands).iterator();
+//		while (iterator.hasNext())
+//		{
+//			final Demand d = iterator.next();
+//			layer.updateHopByHopRoutingDemand(d , false);
+//		}
+//
 //        for (Demand demand : modifiedDemands)
 //            layer.updateHopByHopRoutingDemand(demand , true);
         if (ErrorHandling.isDebugEnabled()) this.checkCachesConsistency();
@@ -6139,12 +6141,13 @@ public class NetPlan extends NetworkElement
         layer.forwardingRulesNoFailureState_f_de = f_de;
 
         /* update all demands: dont call update for aggregated demands, since they are updated by its upstream */
-		final Iterator<Demand> iterator = layer.getMultipleDemandsDownstreamTree(layer.demands).iterator();
-		while (iterator.hasNext())
-		{
-			final Demand d = iterator.next();
-			layer.updateHopByHopRoutingDemand(d , false);
-		}
+        layer.updateHopByHopRoutingDemandsConsideringPropagation(layer.demands);
+//		final Iterator<Demand> iterator = layer.getMultipleDemandsDownstreamTree(layer.demands).iterator();
+//		while (iterator.hasNext())
+//		{
+//			final Demand d = iterator.next();
+//			layer.updateHopByHopRoutingDemand(d , false);
+//		}
 //        for (Demand d : layer.demands) if (!d.isAggregatedDemand()) layer.updateHopByHopRoutingDemand(d , true); 
         if (ErrorHandling.isDebugEnabled()) this.checkCachesConsistency();
     }
@@ -6447,14 +6450,16 @@ public class NetPlan extends NetworkElement
                 }
                 /* update link and demand carried traffics, and demand routing cycle type */
                 layer.forwardingRulesCurrentFailureState_x_de.assign(0); // this is recomputed inside next call
-                
-        		final Iterator<Demand> iterator = layer.getMultipleDemandsDownstreamTree(layer.demands).iterator();
-        		while (iterator.hasNext())
-        		{
-        			final Demand d = iterator.next();
-        			layer.updateHopByHopRoutingDemand(d , false);
-        		}
 
+                layer.updateHopByHopRoutingDemandsConsideringPropagation(layer.demands);
+//                
+//        		final Iterator<Demand> iterator = layer.getMultipleDemandsDownstreamTree(layer.demands).iterator();
+//        		while (iterator.hasNext())
+//        		{
+//        			final Demand d = iterator.next();
+//        			layer.updateHopByHopRoutingDemand(d , false);
+//        		}
+//
 //                for (Demand d : layer.demands) if (!d.isAggregatedDemand()) layer.updateHopByHopRoutingDemand(d , true);
                 // if a demand is aggregated, it is updated by its upstream
 
@@ -6545,10 +6550,21 @@ public class NetPlan extends NetworkElement
         if (offeredTrafficVector.size() != layer.demands.size()) throw new Net2PlanException("Wrong veector size");
         if (offeredTrafficVector.size() > 0) if (offeredTrafficVector.getMinLocation()[0] < 0)
             throw new Net2PlanException("Offered traffic must be greater or equal than zero");
-        if (layer.demands.stream().filter(d->d.isAggregatedDemand()).findFirst().isPresent()) 
-            throw new Net2PlanException("The offered traffic of an aggregated demand cannot be set");
+        List<Demand> nonAggregatedDemandsWithDownstream = new ArrayList<Demand> (layer.demands.size());
+//        if (layer.demands.stream().filter(d->d.isAggregatedDemand()).findFirst().isPresent()) 
+//            throw new Net2PlanException("The offered traffic of an aggregated demand cannot be set");
+        /* Set offered traffic */
         for (Demand d : layer.demands)
-            d.setOfferedTraffic(offeredTrafficVector.get(d.index));
+        {
+        	if (d.isAggregatedDemand()) continue;
+    		d.setOfferedTraffic(offeredTrafficVector.get(d.index));
+        	if (d.isPuttingTrafficInAggregatedDemands())
+        		nonAggregatedDemandsWithDownstream.add(d);
+        }
+        layer.updateOfferedTrafficDemandsOfDownstreamLeavingOthersUntouched(nonAggregatedDemandsWithDownstream);
+        
+        //ver isAggregated a ver si es lo que quiero
+        
         if (ErrorHandling.isDebugEnabled()) this.checkCachesConsistency();
     }
 

@@ -16,6 +16,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
@@ -256,9 +257,39 @@ public class NetworkLayer extends NetworkElement
 		if (this.routingType != routingType) throw new Net2PlanException("Routing type of layer " + this + " must be " + routingType);
 	}
 
+
+	void updateOfferedTrafficDemandsOfDownstreamLeavingOthersUntouched (Collection<Demand> demandCol)
+	{
+		final Iterator<Demand> it = getMultipleDemandsDownstreamTree(demandCol).iterator();
+		while (it.hasNext())
+		{
+			final Demand d = it.next();
+			if (d.isAggregatedDemand())
+			{
+				double offeredTraffic = 0; for (Demand upstream : d.cache_immediateUpstreamDemands) offeredTraffic += upstream.carriedTraffic * upstream.immediateDownstreamDemands.get(d);
+				d._updateOfferedTrafficAndPotentiallyPropagateDownstream(offeredTraffic, false);
+			}
+		}
+	}
+
+	void updateHopByHopRoutingDemandsConsideringPropagation (Collection<Demand> demandCol)
+	{
+		final Iterator<Demand> it = getMultipleDemandsDownstreamTree(demandCol).iterator();
+		while (it.hasNext())
+		{
+			final Demand d = it.next();
+			if (d.isAggregatedDemand())
+			{
+				double offeredTraffic = 0; for (Demand upstream : d.cache_immediateUpstreamDemands) offeredTraffic += upstream.carriedTraffic * upstream.immediateDownstreamDemands.get(d);
+				d.offeredTraffic = offeredTraffic;
+			}
+			this.updateHopByHopRoutingDemandNotPropagation(d);
+		}
+	}
+
 	
 	/* Updates all the network state, to the new situation where the hop-by-hop routing of a demand has changed */
-	void updateHopByHopRoutingDemand (Demand demand , boolean propagateToDownStreamDemands)
+	void updateHopByHopRoutingDemandNotPropagation (Demand demand)
 	{
 		if (demand.layer != this) throw new RuntimeException ("Bad");
 
@@ -315,17 +346,17 @@ public class NetworkLayer extends NetworkElement
 			if ((newXde > 1e-3) && (!link.isUp)) throw new RuntimeException ("Bad");
 		}
 
-		if (propagateToDownStreamDemands)
-		{
-			
-//			final DirectedAcyclicGraph<Demand, Object> downstreamDemands = demand.getDownstreamDemandsTree();
-//			final Iterator<Demand> iteratorOrderedDemandUpdate = downstreamDemands.iterator();
-//			while (iteratorOrderedDemandUpdate.hasNext())
-//			{
-//				final Demand d = iteratorOrderedDemandUpdate.next();
-//				if (d != demand) this.updateHopByHopRoutingDemand(d , false);
-//			}
-		}
+//		if (propagateToDownStreamDemands)
+//		{
+//			
+////			final DirectedAcyclicGraph<Demand, Object> downstreamDemands = demand.getDownstreamDemandsTree();
+////			final Iterator<Demand> iteratorOrderedDemandUpdate = downstreamDemands.iterator();
+////			while (iteratorOrderedDemandUpdate.hasNext())
+////			{
+////				final Demand d = iteratorOrderedDemandUpdate.next();
+////				if (d != demand) this.updateHopByHopRoutingDemand(d , false);
+////			}
+//		}
 		
 //		System.out.println ("updateHopByHopRoutingDemand demand: " + demand + ", this demand x_e: " + forwardingRules_x_de.viewRow(demand.index));
 	}

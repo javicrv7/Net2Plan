@@ -558,7 +558,7 @@ public class Route extends NetworkElement
 		for (Entry<Demand,Double> downstramInfo : demand.immediateDownstreamDemands.entrySet())
 		{
 			double newOfferedTraffic = 0; for (Demand upstreams : downstramInfo.getKey().cache_immediateUpstreamDemands) newOfferedTraffic += upstreams.carriedTraffic;
-			downstramInfo.getKey()._updateOfferedTraffic(newOfferedTraffic);
+			downstramInfo.getKey()._updateOfferedTrafficAndPotentiallyPropagateDownstream(newOfferedTraffic , true);
 		}
 		
 		if (ErrorHandling.isDebugEnabled()) netPlan.checkCachesConsistency();

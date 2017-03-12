@@ -29,7 +29,9 @@ import com.net2plan.libraries.IPUtils;
 import com.net2plan.utils.Constants.RoutingType;
 import com.net2plan.utils.Pair;
 
+import cern.colt.matrix.tdouble.DoubleFactory1D;
 import cern.colt.matrix.tdouble.DoubleFactory2D;
+import cern.colt.matrix.tdouble.DoubleMatrix1D;
 import cern.colt.matrix.tdouble.DoubleMatrix2D;
 
 public class NetPlanTest
@@ -349,6 +351,34 @@ public class NetPlanTest
 		assertEquals(linka46.getCarriedTraffic(), 60 , 0);
 		assertEquals(linka45.getCarriedTraffic(), 40 , 0);
 
+		DoubleMatrix1D demandOffVector = DoubleFactory1D.dense.make(npAgg.getNumberOfDemands());
+		demandOffVector.set(da13.index, 100);
+		demandOffVector.set(da23.index, 100);
+		npAgg.setVectorDemandOfferedTraffic(demandOffVector);
+		assertEquals(da34.getOfferedTraffic(), 200 , 0);
+		assertEquals(da46.getOfferedTraffic(), 120 , 0);
+		assertEquals(da45.getOfferedTraffic(), 80 , 0);
+		assertEquals(da34.getCarriedTraffic(), 200 , 0);
+		assertEquals(da45.getCarriedTraffic(), 80 , 0);
+		assertEquals(da46.getCarriedTraffic(), 120 , 0);
+		assertEquals(linka34.getCarriedTraffic(), 200 , 0);
+		assertEquals(linka46.getCarriedTraffic(), 120 , 0);
+		assertEquals(linka45.getCarriedTraffic(), 80 , 0);
+
+		demandOffVector.set(da13.index, 50);
+		demandOffVector.set(da23.index, 50);
+		npAgg.setVectorDemandOfferedTraffic(demandOffVector);
+		assertEquals(da34.getOfferedTraffic(), 100 , 0);
+		assertEquals(da46.getOfferedTraffic(), 60 , 0);
+		assertEquals(da45.getOfferedTraffic(), 40 , 0);
+		assertEquals(da34.getCarriedTraffic(), 100 , 0);
+		assertEquals(da45.getCarriedTraffic(), 40 , 0);
+		assertEquals(da46.getCarriedTraffic(), 60 , 0);
+		assertEquals(linka34.getCarriedTraffic(), 100 , 0);
+		assertEquals(linka46.getCarriedTraffic(), 60 , 0);
+		assertEquals(linka45.getCarriedTraffic(), 40 , 0);
+
+		
 		da23.attachToAggregatedDemands(null);
 		assertEquals(da13.getOfferedTraffic(), 50 , 0);
 		assertEquals(da23.getOfferedTraffic(), 50 , 0);
@@ -372,8 +402,6 @@ public class NetPlanTest
 		assertEquals(linka46.getCarriedTraffic(), 60 , 0);
 		assertEquals(linka45.getCarriedTraffic(), 40 , 0);
 		
-		
-
 		
 		linka34.setFailureState(false);
 		assertEquals(da13.getOfferedTraffic(), 50 , 0);
