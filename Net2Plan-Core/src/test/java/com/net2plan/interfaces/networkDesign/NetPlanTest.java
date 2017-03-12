@@ -348,6 +348,32 @@ public class NetPlanTest
 		assertEquals(linka34.getCarriedTraffic(), 100 , 0);
 		assertEquals(linka46.getCarriedTraffic(), 60 , 0);
 		assertEquals(linka45.getCarriedTraffic(), 40 , 0);
+
+		da23.attachToAggregatedDemands(null);
+		assertEquals(da13.getOfferedTraffic(), 50 , 0);
+		assertEquals(da23.getOfferedTraffic(), 50 , 0);
+		assertEquals(da34.getOfferedTraffic(), 50 , 0);
+		assertEquals(da45.getOfferedTraffic(), 20 , 0);
+		assertEquals(da46.getOfferedTraffic(), 30 , 0);
+		assertEquals(da34.getCarriedTraffic(), 50 , 0);
+		assertEquals(da45.getCarriedTraffic(), 20 , 0);
+		assertEquals(da46.getCarriedTraffic(), 30 , 0);
+		assertEquals(linka34.getCarriedTraffic(), 50 , 0);
+		assertEquals(linka46.getCarriedTraffic(), 30 , 0);
+		assertEquals(linka45.getCarriedTraffic(), 20 , 0);
+		da23.attachToAggregatedDemands(ImmutableMap.of(da34,1.0));
+		assertEquals(da34.getOfferedTraffic(), 100 , 0);
+		assertEquals(da46.getOfferedTraffic(), 60 , 0);
+		assertEquals(da45.getOfferedTraffic(), 40 , 0);
+		assertEquals(da34.getCarriedTraffic(), 100 , 0);
+		assertEquals(da45.getCarriedTraffic(), 40 , 0);
+		assertEquals(da46.getCarriedTraffic(), 60 , 0);
+		assertEquals(linka34.getCarriedTraffic(), 100 , 0);
+		assertEquals(linka46.getCarriedTraffic(), 60 , 0);
+		assertEquals(linka45.getCarriedTraffic(), 40 , 0);
+		
+		
+
 		
 		linka34.setFailureState(false);
 		assertEquals(da13.getOfferedTraffic(), 50 , 0);
@@ -434,7 +460,7 @@ public class NetPlanTest
 		assertEquals(linka34.getCarriedTraffic(), 0 , 0);
 		assertEquals(linka46.getCarriedTraffic(), 0 , 0);
 		assertEquals(linka45.getCarriedTraffic(), 0 , 0);
-		
+
 		linka13.setFailureState(false);
 		assertEquals(da34.getOfferedTraffic(), 10 , 0);
 		assertEquals(da45.getOfferedTraffic(), 0 , 0);

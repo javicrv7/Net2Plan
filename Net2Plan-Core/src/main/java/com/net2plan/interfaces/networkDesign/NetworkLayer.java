@@ -12,21 +12,22 @@
 
 package com.net2plan.interfaces.networkDesign;
 
-import cern.colt.matrix.tdouble.DoubleMatrix1D;
-import cern.colt.matrix.tdouble.DoubleMatrix2D;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
+
+import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
+
 import com.net2plan.internal.AttributeMap;
 import com.net2plan.libraries.GraphUtils.ClosedCycleRoutingException;
 import com.net2plan.utils.Constants.RoutingCycleType;
 import com.net2plan.utils.Constants.RoutingType;
 import com.net2plan.utils.Quadruple;
 
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
-
-import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
+import cern.colt.matrix.tdouble.DoubleMatrix1D;
+import cern.colt.matrix.tdouble.DoubleMatrix2D;
 
 /** <p>This class contains a representation of a network layer. This is an structure which contains a set of demands, multicast demands and links. 
  * It also is characterized by a routing type, which can be {@link com.net2plan.utils.Constants.RoutingType#SOURCE_ROUTING SOURCE_ROUTING}, or
@@ -316,18 +317,41 @@ public class NetworkLayer extends NetworkElement
 
 		if (propagateToDownStreamDemands)
 		{
-			final DirectedAcyclicGraph<Demand, Object> downstreamDemands = demand.getDownstreamDemandsTree();
-			final Iterator<Demand> iteratorOrderedDemandUpdate = downstreamDemands.iterator();
-			while (iteratorOrderedDemandUpdate.hasNext())
-			{
-				final Demand d = iteratorOrderedDemandUpdate.next();
-				if (d != demand) this.updateHopByHopRoutingDemand(d , false);
-			}
+			
+//			final DirectedAcyclicGraph<Demand, Object> downstreamDemands = demand.getDownstreamDemandsTree();
+//			final Iterator<Demand> iteratorOrderedDemandUpdate = downstreamDemands.iterator();
+//			while (iteratorOrderedDemandUpdate.hasNext())
+//			{
+//				final Demand d = iteratorOrderedDemandUpdate.next();
+//				if (d != demand) this.updateHopByHopRoutingDemand(d , false);
+//			}
 		}
 		
 //		System.out.println ("updateHopByHopRoutingDemand demand: " + demand + ", this demand x_e: " + forwardingRules_x_de.viewRow(demand.index));
 	}
 
+	DirectedAcyclicGraph<Demand,Object> getMultipleDemandsDownstreamTree (Collection<Demand> rootDemands)
+	{
+		final DirectedAcyclicGraph<Demand, Object> res = new DirectedAcyclicGraph<Demand, Object>(Object.class);
+		for (Demand d : rootDemands)
+		{
+			res.addVertex(d);
+			for (Demand immDownstream : d.immediateDownstreamDemands.keySet())
+			{
+				res.addVertex(immDownstream);
+				try { res.addDagEdge(d, immDownstream , new Object ()); } catch (Exception ee) { throw new RuntimeException (); /*  no cycles should happen here! */}
+				DirectedAcyclicGraph<Demand, Object> propagation = immDownstream.getDownstreamDemandsTree();
+				for (Demand down : propagation.vertexSet())
+					res.addVertex(down);
+				for (Object edgeId : propagation.edgeSet())
+					res.addEdge(propagation.getEdgeSource(edgeId) , propagation.getEdgeTarget(edgeId) , edgeId);
+			}	
+		}
+		return res;
+	}
+
+	
+	
 	/**
 	 * <p>Returns a {@code String} representation of the network layer.</p>
 	 * @return {@code String} representation of the network layer

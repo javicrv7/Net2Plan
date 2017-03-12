@@ -5958,8 +5958,16 @@ public class NetPlan extends NetworkElement
 
 //		System.out.println ("affected routes: " + affectedRoutesSourceRouting);
         for (NetworkLayer affectedLayer : affectedLayersHopByHopRouting)
-            for (Demand d : affectedLayer.demands) 
-            	if (!d.isAggregatedDemand()) d.layer.updateHopByHopRoutingDemand(d , true); // aggregated demands are updated implicitly already
+        {
+    		final Iterator<Demand> iterator = affectedLayer.getMultipleDemandsDownstreamTree(affectedLayer.demands).iterator();
+    		while (iterator.hasNext())
+    		{
+    			final Demand d = iterator.next();
+    			affectedLayer.updateHopByHopRoutingDemand(d , false);
+    		}
+        }
+//            for (Demand d : affectedLayer.demands) 
+//            	if (!d.isAggregatedDemand()) d.layer.updateHopByHopRoutingDemand(d , true); // aggregated demands are updated implicitly already
         netPlan.updateFailureStateRoutesAndTrees(affectedRoutesSourceRouting);
         netPlan.updateFailureStateRoutesAndTrees(affectedTrees);
 
@@ -6073,6 +6081,7 @@ public class NetPlan extends NetworkElement
                 {
                     layer.forwardingRulesNoFailureState_f_de.set(demand.index, link.index, splittingFactor);
                     modifiedDemands.add(demand);
+                    modifiedDemands.addAll(demand.getAllDownStreamDemands());
                 }
             }
         }
@@ -6084,8 +6093,15 @@ public class NetPlan extends NetworkElement
             throw new Net2PlanException("The sum of the splitting factors of the output links of a node cannot exceed one");
         }
 
-        for (Demand demand : modifiedDemands)
-            layer.updateHopByHopRoutingDemand(demand , true);
+		final Iterator<Demand> iterator = layer.getMultipleDemandsDownstreamTree(modifiedDemands).iterator();
+		while (iterator.hasNext())
+		{
+			final Demand d = iterator.next();
+			layer.updateHopByHopRoutingDemand(d , false);
+		}
+
+//        for (Demand demand : modifiedDemands)
+//            layer.updateHopByHopRoutingDemand(demand , true);
         if (ErrorHandling.isDebugEnabled()) this.checkCachesConsistency();
     }
 
@@ -6121,8 +6137,15 @@ public class NetPlan extends NetworkElement
             throw new Net2PlanException("The sum of the splitting factors of the output links of a node cannot exceed one");
 
         layer.forwardingRulesNoFailureState_f_de = f_de;
+
         /* update all demands: dont call update for aggregated demands, since they are updated by its upstream */
-        for (Demand d : layer.demands) if (!d.isAggregatedDemand()) layer.updateHopByHopRoutingDemand(d , true); 
+		final Iterator<Demand> iterator = layer.getMultipleDemandsDownstreamTree(layer.demands).iterator();
+		while (iterator.hasNext())
+		{
+			final Demand d = iterator.next();
+			layer.updateHopByHopRoutingDemand(d , false);
+		}
+//        for (Demand d : layer.demands) if (!d.isAggregatedDemand()) layer.updateHopByHopRoutingDemand(d , true); 
         if (ErrorHandling.isDebugEnabled()) this.checkCachesConsistency();
     }
 
@@ -6424,7 +6447,15 @@ public class NetPlan extends NetworkElement
                 }
                 /* update link and demand carried traffics, and demand routing cycle type */
                 layer.forwardingRulesCurrentFailureState_x_de.assign(0); // this is recomputed inside next call
-                for (Demand d : layer.demands) if (!d.isAggregatedDemand()) layer.updateHopByHopRoutingDemand(d , true);
+                
+        		final Iterator<Demand> iterator = layer.getMultipleDemandsDownstreamTree(layer.demands).iterator();
+        		while (iterator.hasNext())
+        		{
+        			final Demand d = iterator.next();
+        			layer.updateHopByHopRoutingDemand(d , false);
+        		}
+
+//                for (Demand d : layer.demands) if (!d.isAggregatedDemand()) layer.updateHopByHopRoutingDemand(d , true);
                 // if a demand is aggregated, it is updated by its upstream
 
                 break;

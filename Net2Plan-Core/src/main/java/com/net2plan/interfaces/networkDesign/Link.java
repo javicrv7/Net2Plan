@@ -453,7 +453,14 @@ public class Link extends NetworkElement
 		layer.checkRoutingType(RoutingType.HOP_BY_HOP_ROUTING);
 		layer.forwardingRulesNoFailureState_f_de.viewColumn (this.index).assign(0);
 		/* update the routing of the demands traversing the eliminated link (others are unaffected) */
-		for (Demand d : layer.demands) if (layer.forwardingRulesCurrentFailureState_x_de.get(d.index , this.index) > 0) layer.updateHopByHopRoutingDemand(d , true);
+		final Iterator<Demand> iterator = layer.getMultipleDemandsDownstreamTree(layer.demands).iterator();
+		while (iterator.hasNext())
+		{
+			final Demand d = iterator.next();
+			if (layer.forwardingRulesCurrentFailureState_x_de.get(d.index , this.index) > 0) layer.updateHopByHopRoutingDemand(d , false);
+		}
+
+		//for (Demand d : layer.demands) if (layer.forwardingRulesCurrentFailureState_x_de.get(d.index , this.index) > 0) layer.updateHopByHopRoutingDemand(d , true);
 		if (ErrorHandling.isDebugEnabled()) netPlan.checkCachesConsistency();
 		
 	}
@@ -509,7 +516,12 @@ public class Link extends NetworkElement
 			DoubleMatrix1D x_d_linkToRemove = layer.forwardingRulesCurrentFailureState_x_de.viewColumn(index).copy ();
 			layer.forwardingRulesCurrentFailureState_x_de = DoubleFactory2D.sparse.appendColumns(layer.forwardingRulesCurrentFailureState_x_de.viewPart(0, 0, D , index), layer.forwardingRulesCurrentFailureState_x_de.viewPart(0 , index + 1, D , layer.links.size() - index - 1));
 			NetPlan.removeNetworkElementAndShiftIndexes (layer.links , index);
-			for (Demand d : layer.demands) if (x_d_linkToRemove.get(d.index) > PRECISION_FACTOR) layer.updateHopByHopRoutingDemand(d , true);
+			Iterator<Demand> iterator = layer.getMultipleDemandsDownstreamTree(layer.demands).iterator();
+			while (iterator.hasNext())
+			{
+				final Demand d = iterator.next();
+				if (x_d_linkToRemove.get(d.index) > PRECISION_FACTOR) layer.updateHopByHopRoutingDemand(d , false);
+			}
 		}
 
         for (String tag : tags) netPlan.cache_taggedElements.get(tag).remove(this);

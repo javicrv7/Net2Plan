@@ -536,14 +536,24 @@ public class Demand extends NetworkElement
 		if (!this.immediateDownstreamDemands.isEmpty())
 		{
 			/* remove existing attachments of other demands attached to me */
-			for (Demand downstreamDemand : this.immediateDownstreamDemands.keySet())
+			for (Demand downstreamDemand : new HashSet<> (this.immediateDownstreamDemands.keySet()))
+			{
 				downstreamDemand.cache_immediateUpstreamDemands.remove(this);
-				
-			this.immediateDownstreamDemands.clear(); // now I am not an aggregated demand
-	
-			/* Update the traffic of the demands, with the removed downstream traffic */
-			if (!this.layer.isSourceRouting())
-				this.layer.updateHopByHopRoutingDemand(this , true);
+				this.immediateDownstreamDemands.remove (downstreamDemand); // now I am not an aggregated demand
+				/* update the deattachment, both in hop-by-hop and source routing */
+				double newOfferedTrafficDownstreamDemand = 0;
+				for (Demand otherUpstreamDemand : downstreamDemand.cache_immediateUpstreamDemands)
+					newOfferedTrafficDownstreamDemand += otherUpstreamDemand.getCarriedTraffic() * otherUpstreamDemand.immediateDownstreamDemands.get(downstreamDemand); 
+				downstreamDemand._updateOfferedTraffic(newOfferedTrafficDownstreamDemand);
+			}	
+//	
+//			/* Update the traffic of the demands, with the removed downstream traffic */
+//			if (!this.layer.isSourceRouting())
+//			{
+//				
+//			}
+//				this.setOfferedTraffic(this.offeredTraffic);
+////				this.layer.updateHopByHopRoutingDemand(this , true);
 		}
 		
 		if (newDownstreamAggregationDemandMap.isEmpty()) return;
@@ -552,9 +562,19 @@ public class Demand extends NetworkElement
 		this.immediateDownstreamDemands.putAll(newDownstreamAggregationDemandMap);
 		for (Demand downstreamDemand : this.immediateDownstreamDemands.keySet())
 			downstreamDemand.cache_immediateUpstreamDemands.add(this);
+
+		
 		/* Update the routing in a safe way (demands in the topological order) */
-		if (!layer.isSourceRouting())
-			this.layer.updateHopByHopRoutingDemand(this , true);
+		for (Demand downstreamDemand : this.immediateDownstreamDemands.keySet())
+		{
+			double newOfferedTrafficDownstreamDemand = 0;
+			for (Demand otherUpstreamDemand : downstreamDemand.cache_immediateUpstreamDemands)
+				newOfferedTrafficDownstreamDemand += otherUpstreamDemand.getCarriedTraffic() * otherUpstreamDemand.immediateDownstreamDemands.get(downstreamDemand); 
+			downstreamDemand._updateOfferedTraffic(newOfferedTrafficDownstreamDemand);
+		}
+		
+//		if (!layer.isSourceRouting())
+//			this.layer.updateHopByHopRoutingDemand(this , true);
 	}
 
 	/**
@@ -568,6 +588,7 @@ public class Demand extends NetworkElement
 		double res = 0;
 		for (Demand upstreamDemand : cache_immediateUpstreamDemands)
 			res += upstreamDemand.getCarriedTraffic() * upstreamDemand.getImmediateDownstreamDemands().get(this);
+		if (Math.abs(res - this.offeredTraffic) > 1e-3) throw new RuntimeException("Demand " + this + ", sum: " + res + ", this.offered: " + this.offeredTraffic);
 		return res;
 	}
 
@@ -912,7 +933,8 @@ public class Demand extends NetworkElement
 	 * @return {@code String} representation of the demand
 	 */
 	@Override
-	public String toString () { return "d" + index + " (id " + id + ")"; }
+	public String toString () { return "d" + index + " (n" + this.ingressNode.index + " to n" + this.egressNode.index + ")"; }
+//	public String toString () { return "d" + index + " (id " + id + ")"; }
 	
 	/**
 	 * <p>Computes the fundamental matrix of the absorbing Markov chain in the current hop-by-hop routing, for the
