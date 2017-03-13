@@ -260,7 +260,8 @@ public class NetworkLayer extends NetworkElement
 
 	void updateOfferedTrafficDemandsOfDownstreamLeavingOthersUntouched (Collection<Demand> demandCol)
 	{
-		final Iterator<Demand> it = getMultipleDemandsDownstreamTree(demandCol).iterator();
+		final DirectedAcyclicGraph<Demand,Object> downTree = getMultipleDemandsDownstreamTree(demandCol);
+		final Iterator<Demand> it = downTree.iterator();
 		while (it.hasNext())
 		{
 			final Demand d = it.next();
@@ -369,13 +370,9 @@ public class NetworkLayer extends NetworkElement
 			res.addVertex(d);
 			for (Demand immDownstream : d.immediateDownstreamDemands.keySet())
 			{
-				res.addVertex(immDownstream);
+				final boolean newDemandAdded = res.addVertex(immDownstream);
 				try { res.addDagEdge(d, immDownstream , new Object ()); } catch (Exception ee) { throw new RuntimeException (); /*  no cycles should happen here! */}
-				DirectedAcyclicGraph<Demand, Object> propagation = immDownstream.getDownstreamDemandsTree();
-				for (Demand down : propagation.vertexSet())
-					res.addVertex(down);
-				for (Object edgeId : propagation.edgeSet())
-					res.addEdge(propagation.getEdgeSource(edgeId) , propagation.getEdgeTarget(edgeId) , edgeId);
+				if (newDemandAdded) immDownstream.updateDownstreamTree(res, false);
 			}	
 		}
 		return res;

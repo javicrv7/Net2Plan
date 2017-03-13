@@ -6551,20 +6551,16 @@ public class NetPlan extends NetworkElement
         if (offeredTrafficVector.size() > 0) if (offeredTrafficVector.getMinLocation()[0] < 0)
             throw new Net2PlanException("Offered traffic must be greater or equal than zero");
         List<Demand> nonAggregatedDemandsWithDownstream = new ArrayList<Demand> (layer.demands.size());
-//        if (layer.demands.stream().filter(d->d.isAggregatedDemand()).findFirst().isPresent()) 
-//            throw new Net2PlanException("The offered traffic of an aggregated demand cannot be set");
         /* Set offered traffic */
         for (Demand d : layer.demands)
         {
         	if (d.isAggregatedDemand()) continue;
-    		d.setOfferedTraffic(offeredTrafficVector.get(d.index));
+    		d._updateOfferedTrafficAndPotentiallyPropagateDownstream(offeredTrafficVector.get(d.index), false);
         	if (d.isPuttingTrafficInAggregatedDemands())
         		nonAggregatedDemandsWithDownstream.add(d);
         }
         layer.updateOfferedTrafficDemandsOfDownstreamLeavingOthersUntouched(nonAggregatedDemandsWithDownstream);
-        
-        //ver isAggregated a ver si es lo que quiero
-        
+
         if (ErrorHandling.isDebugEnabled()) this.checkCachesConsistency();
     }
 

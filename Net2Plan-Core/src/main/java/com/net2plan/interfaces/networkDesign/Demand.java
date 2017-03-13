@@ -423,27 +423,58 @@ public class Demand extends NetworkElement
 		return res;
 	}
 	
+	/** For aggregated demands, updates an input acyclic tree, addding this demand as a root vertex, and a link from a demand 
+	 * d1 to a demand d2, if d1 directly puts traffic in downstream demand d2 (no intermediate demands). 
+	 * @return see above
+	 */
+	public void updateUpstreamTree (DirectedAcyclicGraph<Demand,Object> tree , boolean includeThisDemand)
+	{
+		if (includeThisDemand)
+		{
+			final boolean newNodeInTree = tree.addVertex(this);
+			if (!newNodeInTree) return;
+		}
+		for (Demand immUpstream : this.cache_immediateUpstreamDemands)
+		{
+			final boolean newNodeAdded = tree.addVertex(immUpstream);
+			try { tree.addDagEdge(this , immUpstream , new Object ()); } catch (Exception ee) { throw new RuntimeException (); /*  no cycles should happen here! */}
+			if (newNodeAdded) 
+				immUpstream.updateUpstreamTree(tree , false);
+		}
+	}
+
 	/** For aggregated demands, returns a direct acyclic tree, with origin vertex me, and a link from a demand d1 to a demand d2, 
 	 * if d1 directly receives traffic from upstream demand d2 (no intermediate demands). For non-aggregated demands, returns an empty tree
 	 * @return see above
 	 */
 	public DirectedAcyclicGraph<Demand,Object> getUpstreamDemandsTree ()
 	{
-		final DirectedAcyclicGraph<Demand, Object> res = new DirectedAcyclicGraph<Demand, Object>(Object.class);
-		if (this.cache_immediateUpstreamDemands.isEmpty()) return res;
-		res.addVertex(this);
-		for (Demand immUpstream : this.cache_immediateUpstreamDemands)
-		{
-			res.addVertex(immUpstream);
-			try { res.addDagEdge(this, immUpstream , new Object ()); } catch (Exception ee) { throw new RuntimeException (); /*  no cycles should happen here! */}
-			DirectedAcyclicGraph<Demand, Object> propagation = immUpstream.getUpstreamDemandsTree();
-			for (Demand d : propagation.vertexSet())
-				res.addVertex(d);
-			for (Object edgeId : propagation.edgeSet())
-				res.addEdge(propagation.getEdgeSource(edgeId) , propagation.getEdgeTarget(edgeId) , edgeId);
-		}	
-		return res;
+		final DirectedAcyclicGraph<Demand,Object> tree  = new DirectedAcyclicGraph<Demand,Object> (Object.class);
+		updateUpstreamTree(tree, true);
+		return tree;
 	}
+
+	
+	/** For aggregated demands, updates an input acyclic tree, addding this demand as a root vertex, and a link from a demand 
+	 * d1 to a demand d2, if d1 directly puts traffic in downstream demand d2 (no intermediate demands). 
+	 * @return see above
+	 */
+	public void updateDownstreamTree (DirectedAcyclicGraph<Demand,Object> tree , boolean includeThisDemand)
+	{
+		if (includeThisDemand)
+		{
+			final boolean newNodeInTree = tree.addVertex(this);
+			if (!newNodeInTree) return;
+		}
+		for (Demand immDownstream : this.immediateDownstreamDemands.keySet())
+		{
+			final boolean newNodeAdded = tree.addVertex(immDownstream);
+			try { tree.addDagEdge(this, immDownstream , new Object ()); } catch (Exception ee) { throw new RuntimeException (); /*  no cycles should happen here! */}
+			if (newNodeAdded) 
+				immDownstream.updateDownstreamTree(tree , false);
+		}
+	}
+	
 
 	/** For aggregated demands, returns a direct acyclic tree, with origin vertex me, and a link from a demand d1 to a demand d2, 
 	 * if d1 directly puts traffic in downstream demand d2 (no intermediate demands). For non-aggregated demands, returns an empty tree
@@ -451,22 +482,10 @@ public class Demand extends NetworkElement
 	 */
 	public DirectedAcyclicGraph<Demand,Object> getDownstreamDemandsTree ()
 	{
-		final DirectedAcyclicGraph<Demand, Object> res = new DirectedAcyclicGraph<Demand, Object>(Object.class);
-		if (this.immediateDownstreamDemands.isEmpty()) return res;
-		res.addVertex(this);
-		for (Demand immDownstream : this.immediateDownstreamDemands.keySet())
-		{
-			res.addVertex(immDownstream);
-			try { res.addDagEdge(this, immDownstream , new Object ()); } catch (Exception ee) { throw new RuntimeException (); /*  no cycles should happen here! */}
-			DirectedAcyclicGraph<Demand, Object> propagation = immDownstream.getDownstreamDemandsTree();
-			for (Demand d : propagation.vertexSet())
-				res.addVertex(d);
-			for (Object edgeId : propagation.edgeSet())
-				res.addEdge(propagation.getEdgeSource(edgeId) , propagation.getEdgeTarget(edgeId) , edgeId);
-		}	
-		return res;
+		final DirectedAcyclicGraph<Demand,Object> tree  = new DirectedAcyclicGraph<Demand,Object> (Object.class);
+		updateDownstreamTree(tree, true);
+		return tree;
 	}
-
 	
 	/** For aggregated demands, returns the demands that I put traffic in (directly or via others). For non-aggregated demadns, returns an empty set
 	 * @return see above

@@ -222,11 +222,13 @@ public class NetPlanTest
 	public void testGetAllUpstreamDemandsTree()
 	{
 		DirectedAcyclicGraph<Demand, Object> res = new DirectedAcyclicGraph<Demand, Object> (Object.class);
-		assertEquals(da13.getUpstreamDemandsTree().vertexSet() , res.vertexSet());
-		assertEquals(da23.getUpstreamDemandsTree().vertexSet() , res.vertexSet());
-		res.addVertex(da34);
 		res.addVertex(da13);
+		assertEquals(da13.getUpstreamDemandsTree().vertexSet() , res.vertexSet());
+		res.removeVertex(da13);
 		res.addVertex(da23);
+		assertEquals(da23.getUpstreamDemandsTree().vertexSet() , res.vertexSet());
+		res.addVertex(da13);
+		res.addVertex(da34);
 		assertEquals(da34.getUpstreamDemandsTree().vertexSet() , res.vertexSet());
 		res.addVertex(da45);
 		assertEquals(da45.getUpstreamDemandsTree().vertexSet() , res.vertexSet());
@@ -239,10 +241,13 @@ public class NetPlanTest
 	public void testGetAllDownstreamDemandsTree()
 	{
 		DirectedAcyclicGraph<Demand, Object> res = new DirectedAcyclicGraph<Demand, Object> (Object.class);
+		
+		res.addVertex(da46);
 		assertEquals(da46.getDownstreamDemandsTree().vertexSet() , res.vertexSet());
+		res.removeVertex(da46);
+		res.addVertex(da45);
 		assertEquals(da45.getDownstreamDemandsTree().vertexSet() , res.vertexSet());
 		res.addVertex(da34);
-		res.addVertex(da45);
 		res.addVertex(da46);
 		assertEquals(da34.getDownstreamDemandsTree().vertexSet() , res.vertexSet());
 		res.addVertex(da13);
