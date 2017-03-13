@@ -12,6 +12,7 @@
 
 package com.net2plan.interfaces.networkDesign;
 
+import java.nio.channels.AcceptPendingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -25,6 +26,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import javax.management.RuntimeErrorException;
 
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 
@@ -613,6 +616,20 @@ public class Demand extends NetworkElement
 	}
 
 	/**
+	 * Returns the offered traffic of the demand, considering for aggregated demands, 
+	 * the situation if all the upstream demands carried the offered traffic.
+	 * @return see above
+	 */
+	public double getOfferedTrafficIfUpstreamWereFullyCarried()
+	{
+		if (cache_immediateUpstreamDemands.isEmpty ()) return offeredTraffic;
+		double res = 0;
+		for (Demand upstreamDemand : cache_immediateUpstreamDemands)
+			res += upstreamDemand.getOfferedTrafficIfUpstreamWereFullyCarried() * upstreamDemand.getImmediateDownstreamDemands().get(this);
+		return res;
+	}
+
+	/**
 	 * <p>Returns the non zero forwarding rules as a map of pairs demand-link, and its associated splitting factor (between 0 and 1).</p>
 	 * <p><b>Important: </b> If routing type is set to {@link com.net2plan.utils.Constants.RoutingType#HOP_BY_HOP_ROUTING HOP_BY_HOP_ROUTING} an exception will be thrown.
 	 * @return a map with the forwarding rules. The map is empty if no non-zero forwarding rules are defined.
@@ -1035,6 +1052,28 @@ public class Demand extends NetworkElement
 		if (coupledUpperLayerLink != null)
 			if (!coupledUpperLayerLink.coupledLowerLayerDemand.equals (this)) throw new RuntimeException ("Bad");
 		if (!layer.demands.contains(this)) throw new RuntimeException ("Bad");
+		
+		if (this.isPuttingTrafficInAggregatedDemands())
+		{
+			double accumFraction = 0;
+			for (Demand downstream : this.immediateDownstreamDemands.keySet())
+			{
+				if (!downstream.cache_immediateUpstreamDemands.contains(this)) throw new RuntimeException();
+				final double fraction = this.immediateDownstreamDemands.get (downstream); 
+				accumFraction += fraction;
+			}
+			if (Math.abs(accumFraction  - 1) > 1e-3) throw new RuntimeException();
+		}
+		if (this.isAggregatedDemand())
+		{
+			double accumOfferedTraffic = 0;
+			for (Demand upstream : this.cache_immediateUpstreamDemands)
+			{
+				if (upstream.immediateDownstreamDemands.get(this) == null) throw new RuntimeException();
+				accumOfferedTraffic += upstream.getCarriedTraffic() * upstream.immediateDownstreamDemands.get(this); 
+			}
+			if (Math.abs(accumOfferedTraffic - this.offeredTraffic) > 1e-3) throw new RuntimeException();
+		}
 	}
 
 	/** Returns the set of links in this layer that could potentially carry traffic of this demand, according to the routes/forwarding rules defined.
