@@ -6450,7 +6450,6 @@ public class NetPlan extends NetworkElement
                 }
                 /* update link and demand carried traffics, and demand routing cycle type */
                 layer.forwardingRulesCurrentFailureState_x_de.assign(0); // this is recomputed inside next call
-
                 layer.updateHopByHopRoutingDemandsConsideringPropagation(layer.demands);
 //                
 //        		final Iterator<Demand> iterator = layer.getMultipleDemandsDownstreamTree(layer.demands).iterator();

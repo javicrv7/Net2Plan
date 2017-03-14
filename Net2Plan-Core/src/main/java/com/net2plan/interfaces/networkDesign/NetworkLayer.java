@@ -27,6 +27,7 @@ import com.net2plan.utils.Constants.RoutingCycleType;
 import com.net2plan.utils.Constants.RoutingType;
 import com.net2plan.utils.Quadruple;
 
+import cern.colt.matrix.tdouble.DoubleFactory1D;
 import cern.colt.matrix.tdouble.DoubleMatrix1D;
 import cern.colt.matrix.tdouble.DoubleMatrix2D;
 
@@ -297,49 +298,60 @@ public class NetworkLayer extends NetworkElement
 //		System.out.println ("updateHopByHopRoutingDemand demand: " + demand + ", cache links down: " + cache_linksDown);
 
 		/* set 0 in the down links and the link in-out from the down nodes (they do not send traffic) */
+		final double h_d = demand.getOfferedTraffic();
 		DoubleMatrix1D fowardingRulesThisFailureState_f_e;
-		if (cache_linksDown.isEmpty() && netPlan.cache_nodesDown.isEmpty())
-			fowardingRulesThisFailureState_f_e = forwardingRulesNoFailureState_f_de.viewRow(demand.index);
+		DoubleMatrix2D M;
+		if (h_d == 0)
+		{
+			M = null;
+			fowardingRulesThisFailureState_f_e = DoubleFactory1D.sparse.make(links.size());
+			demand.carriedTraffic = 0;
+			if (demand.coupledUpperLayerLink != null) demand.coupledUpperLayerLink.capacity = demand.carriedTraffic;
+		}
 		else
 		{
-			fowardingRulesThisFailureState_f_e = forwardingRulesNoFailureState_f_de.viewRow(demand.index).copy();
-			for (Link downLink : cache_linksDown) 
-				fowardingRulesThisFailureState_f_e.set(downLink.index , 0);
-			for (Node downNode : netPlan.cache_nodesDown)
+			if (cache_linksDown.isEmpty() && netPlan.cache_nodesDown.isEmpty())
+				fowardingRulesThisFailureState_f_e = forwardingRulesNoFailureState_f_de.viewRow(demand.index);
+			else
 			{
-				for (Link downLink : downNode.cache_nodeIncomingLinks) 
-					if (downLink.layer.equals (this))
-						fowardingRulesThisFailureState_f_e.set(downLink.index , 0);
-				for (Link downLink : downNode.cache_nodeOutgoingLinks) 
-					if (downLink.layer.equals (this)) 
-						fowardingRulesThisFailureState_f_e.set(downLink.index , 0);
+				fowardingRulesThisFailureState_f_e = forwardingRulesNoFailureState_f_de.viewRow(demand.index).copy();
+				for (Link downLink : cache_linksDown) 
+					fowardingRulesThisFailureState_f_e.set(downLink.index , 0);
+				for (Node downNode : netPlan.cache_nodesDown)
+				{
+					for (Link downLink : downNode.cache_nodeIncomingLinks) 
+						if (downLink.layer.equals (this))
+							fowardingRulesThisFailureState_f_e.set(downLink.index , 0);
+					for (Link downLink : downNode.cache_nodeOutgoingLinks) 
+						if (downLink.layer.equals (this)) 
+							fowardingRulesThisFailureState_f_e.set(downLink.index , 0);
+				}
 			}
-		}
 
 //		System.out.println ("updateHopByHopRoutingDemand demand: " + demand + ", forwardingthisdemand_e: " + forwardingRules_f_de.viewRow(demand.index));
 
-		Quadruple<DoubleMatrix2D, RoutingCycleType , Double , DoubleMatrix1D> fundMatrixComputation = demand.computeRoutingFundamentalMatrixDemand (fowardingRulesThisFailureState_f_e);
-		DoubleMatrix2D M = fundMatrixComputation.getFirst ();
-		double s_egressNode = fundMatrixComputation.getThird();
-		DoubleMatrix1D dropFraction_n = fundMatrixComputation.getFourth();
+			Quadruple<DoubleMatrix2D, RoutingCycleType , Double , DoubleMatrix1D> fundMatrixComputation = demand.computeRoutingFundamentalMatrixDemand (fowardingRulesThisFailureState_f_e);
+			M = fundMatrixComputation.getFirst ();
+			double s_egressNode = fundMatrixComputation.getThird();
+			DoubleMatrix1D dropFraction_n = fundMatrixComputation.getFourth();
+	
+			/* update the demand routing cycle information */
+			demand.routingCycleType = fundMatrixComputation.getSecond();
+			if (demand.routingCycleType == RoutingCycleType.CLOSED_CYCLES) 
+				throw new ClosedCycleRoutingException("Closed routing cycle for demand " + demand); 
+			
+			/* update the demand carried traffic */
+			demand.carriedTraffic = demand.getOfferedTraffic() * M.get(demand.ingressNode.index , demand.egressNode.index) * s_egressNode;
+			if (demand.coupledUpperLayerLink != null) demand.coupledUpperLayerLink.capacity = demand.carriedTraffic;
+	
+			if (demand.carriedTraffic > demand.getOfferedTraffic() + 1E-5) throw new RuntimeException ("Bad");
+		}		
 
-		/* update the demand routing cycle information */
-		demand.routingCycleType = fundMatrixComputation.getSecond();
-		if (demand.routingCycleType == RoutingCycleType.CLOSED_CYCLES) 
-			throw new ClosedCycleRoutingException("Closed routing cycle for demand " + demand); 
-		
-		/* update the demand carried traffic */
-		demand.carriedTraffic = demand.getOfferedTraffic() * M.get(demand.ingressNode.index , demand.egressNode.index) * s_egressNode;
-		if (demand.coupledUpperLayerLink != null) demand.coupledUpperLayerLink.capacity = demand.carriedTraffic;
-
-		if (demand.carriedTraffic > demand.getOfferedTraffic() + 1E-5) throw new RuntimeException ("Bad");
-		
 		/* update the carried traffic of this demand in each link */
-		final double h_d = demand.getOfferedTraffic();
 		for (Link link : links)
 		{
 			final double oldXde = this.forwardingRulesCurrentFailureState_x_de.get (demand.index , link.index);
-			final double newXde = h_d * M.get (demand.ingressNode.index , link.originNode.index) * fowardingRulesThisFailureState_f_e.get (link.index);
+			final double newXde = h_d == 0? 0 : h_d * M.get (demand.ingressNode.index , link.originNode.index) * fowardingRulesThisFailureState_f_e.get (link.index);
 			if (newXde < -1E-5) throw new RuntimeException ("Bad");
 			this.forwardingRulesCurrentFailureState_x_de.set (demand.index , link.index , newXde);
 			link.cache_carriedTraffic += newXde - oldXde; // in hop-by-hop carried traffic is the same as occupied capacity
@@ -367,7 +379,8 @@ public class NetworkLayer extends NetworkElement
 		final DirectedAcyclicGraph<Demand, Object> res = new DirectedAcyclicGraph<Demand, Object>(Object.class);
 		for (Demand d : rootDemands)
 		{
-			res.addVertex(d);
+			final boolean addedANode = res.addVertex(d);
+			if (!addedANode) continue;
 			for (Demand immDownstream : d.immediateDownstreamDemands.keySet())
 			{
 				final boolean newDemandAdded = res.addVertex(immDownstream);
