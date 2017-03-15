@@ -324,6 +324,14 @@ public class NetPlanTest
 		assertEquals(da45.getCarriedTraffic(), 0 , 0);
 		assertEquals(da46.getCarriedTraffic(), 0 , 0);
 		
+		assertEquals(da34.getOfferedTrafficIfUpstreamWereFullyCarried(), 10 , 0);
+		assertEquals(da45.getOfferedTrafficIfUpstreamWereFullyCarried(), 4 , 0);
+		assertEquals(da46.getOfferedTrafficIfUpstreamWereFullyCarried(), 6 , 0);
+		assertEquals(da34.getOfferedTrafficIfUpstreamWereFullyCarried(), 10 , 0);
+		assertEquals(da45.getOfferedTrafficIfUpstreamWereFullyCarried(), 4 , 0);
+		assertEquals(da46.getOfferedTrafficIfUpstreamWereFullyCarried(), 6 , 0);
+		
+		
 		IPUtils.setECMPForwardingRulesFromLinkWeights(npAgg, null);
 		assertEquals(da34.getOfferedTraffic(), 10 , 0);
 		assertEquals(da45.getOfferedTraffic(), 4 , 0);
