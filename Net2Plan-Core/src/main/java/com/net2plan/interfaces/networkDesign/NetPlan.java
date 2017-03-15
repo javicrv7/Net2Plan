@@ -622,6 +622,78 @@ public class NetPlan extends NetworkElement
         return addLink(null, originNode, destinationNode, capacity, lengthInKm, propagationSpeedInKmPerSecond, attributes, optionalLayerParameter);
     }
 
+    /** (for efficiency purposes) Adds as many links as indicated in the list of initial and end nodes, for the given layer. If no layer
+     * is porvided, the default layeris assumed. all links have zero capacity, a propagation speed of 200000 km/s, and a length 
+     * equal to the euclidean distance between end nodes. 
+     * @param originNodes list of origin nodes
+     * @param destinationNodes list of destination nodes
+     * @param createBidirectionalLinks if set, double number of links are created, and are set as bidirectional coupled accordingly
+     * @param optionalLayerParameter
+     * @return
+     */
+    public List<Link> addLinks(List<Node> originNodes, List<Node> destinationNodes, boolean createBidirectionalLinks , NetworkLayer... optionalLayerParameter)
+    {
+        checkIsModifiable();
+        NetworkLayer layer = checkInThisNetPlanOptionalLayerParameter(optionalLayerParameter);
+
+        final int En = createBidirectionalLinks? 2 * originNodes.size() : originNodes.size();
+    	if (En == 0) throw new Net2PlanException ("Wron array size");
+    	if (destinationNodes.size() != originNodes.size()) throw new Net2PlanException ("Wron array size");
+    	final List<Link> res = new ArrayList<> (En);
+    	for (Node n : originNodes) checkInThisNetPlan(n);
+    	for (Node n : destinationNodes) checkInThisNetPlan(n);
+    	for (int cont = 0; cont < originNodes.size() ; cont ++)
+    		if (originNodes.get(cont) == destinationNodes.get(cont)) throw new Net2PlanException("Self-links are not allowed");
+
+        long init = NetPlan.profileTime("", -1);
+    	
+        if (layer.routingType == RoutingType.HOP_BY_HOP_ROUTING)
+        {
+            layer.forwardingRulesNoFailureState_f_de = DoubleFactory2D.sparse.appendColumns(layer.forwardingRulesNoFailureState_f_de, DoubleFactory2D.sparse.make(layer.demands.size() , En));
+            layer.forwardingRulesCurrentFailureState_x_de = DoubleFactory2D.sparse.appendColumns(layer.forwardingRulesCurrentFailureState_x_de, DoubleFactory2D.sparse.make(layer.demands.size() , En));
+            layer.forwardingRules_Aout_ne = DoubleFactory2D.sparse.appendColumns(layer.forwardingRules_Aout_ne, DoubleFactory2D.sparse.make(netPlan.nodes.size() , En));
+            layer.forwardingRules_Ain_ne = DoubleFactory2D.sparse.appendColumns(layer.forwardingRules_Ain_ne, DoubleFactory2D.sparse.make(netPlan.nodes.size() , En));
+        	init = NetPlan.profileTime("addlink 5", init);
+        }
+        
+    	for (int cont = 0; cont < originNodes.size() ; cont ++)
+    	{
+            long linkId = nextElementId.longValue();
+            nextElementId.increment();
+            final Node originNode = originNodes.get(cont);
+            final Node destinationNode = destinationNodes.get(cont);
+            final double lengthInKm = getNodePairEuclideanDistance(originNode, destinationNode);
+            Link link = new Link(this, linkId, layer.links.size(), layer, originNode, destinationNode, lengthInKm, 200000, 0, new AttributeMap());
+            cache_id2LinkMap.put(linkId, link);
+            layer.links.add(link);
+            originNode.cache_nodeOutgoingLinks.add(link);
+            destinationNode.cache_nodeIncomingLinks.add(link);
+            layer.forwardingRules_Aout_ne.set(originNode.index, link.index , 1.0);
+            layer.forwardingRules_Ain_ne.set(destinationNode.index, link.index , 1.0);
+            res.add(link);
+            if (createBidirectionalLinks)
+            {
+            	Link link21 = new Link(this, linkId, layer.links.size(), layer, destinationNode, originNode, lengthInKm, 200000, 0, new AttributeMap());
+                link.setAttribute(KEY_STRING_BIDIRECTIONALCOUPLE, "" + link21.id);
+                link21.setAttribute(KEY_STRING_BIDIRECTIONALCOUPLE, "" + link.id);
+                linkId = nextElementId.longValue();
+                nextElementId.increment();
+                cache_id2LinkMap.put(linkId, link21);
+                layer.links.add(link21);
+                destinationNode.cache_nodeOutgoingLinks.add(link21);
+                originNode.cache_nodeIncomingLinks.add(link21);
+                layer.forwardingRules_Aout_ne.set(destinationNode.index, link21.index , 1.0);
+                layer.forwardingRules_Ain_ne.set(originNode.index, link21.index , 1.0);
+                res.add(link21);
+            }
+    	}
+
+
+        if (ErrorHandling.isDebugEnabled()) this.checkCachesConsistency();
+        return res;
+    }
+
+    
     Link addLink(Long linkId, Node originNode, Node destinationNode, double capacity, double lengthInKm, double propagationSpeedInKmPerSecond, Map<String, String> attributes, NetworkLayer... optionalLayerParameter)
     {
         capacity = NetPlan.adjustToTolerance(capacity);
@@ -647,14 +719,23 @@ public class NetPlan extends NetworkElement
         originNode.cache_nodeOutgoingLinks.add(link);
         destinationNode.cache_nodeIncomingLinks.add(link);
 
+        long init = NetPlan.profileTime("", -1);
+        
         if (layer.routingType == RoutingType.HOP_BY_HOP_ROUTING)
         {
+        	init = NetPlan.profileTime("addlink 1", init);
             layer.forwardingRulesNoFailureState_f_de = DoubleFactory2D.sparse.appendColumn(layer.forwardingRulesNoFailureState_f_de, DoubleFactory1D.sparse.make(layer.demands.size()));
+        	init = NetPlan.profileTime("addlink 2", init);
             layer.forwardingRulesCurrentFailureState_x_de = DoubleFactory2D.sparse.appendColumn(layer.forwardingRulesCurrentFailureState_x_de, DoubleFactory1D.sparse.make(layer.demands.size()));
+        	init = NetPlan.profileTime("addlink 3", init);
             layer.forwardingRules_Aout_ne = DoubleFactory2D.sparse.appendColumn(layer.forwardingRules_Aout_ne, DoubleFactory1D.sparse.make(netPlan.nodes.size()));
+        	init = NetPlan.profileTime("addlink 4", init);
             layer.forwardingRules_Ain_ne = DoubleFactory2D.sparse.appendColumn(layer.forwardingRules_Ain_ne, DoubleFactory1D.sparse.make(netPlan.nodes.size()));
+        	init = NetPlan.profileTime("addlink 5", init);
             layer.forwardingRules_Aout_ne.set(originNode.index, layer.forwardingRules_Aout_ne.columns() - 1, 1.0);
+        	init = NetPlan.profileTime("addlink 6", init);
             layer.forwardingRules_Ain_ne.set(destinationNode.index, layer.forwardingRules_Ain_ne.columns() - 1, 1.0);
+        	init = NetPlan.profileTime("addlink 7", init);
         }
 
         if (ErrorHandling.isDebugEnabled()) this.checkCachesConsistency();
@@ -6171,8 +6252,10 @@ public class NetPlan extends NetworkElement
 //			final Demand d = iterator.next();
 //			layer.updateHopByHopRoutingDemand(d , false);
 //		}
-//        for (Demand d : layer.demands) if (!d.isAggregatedDemand()) layer.updateHopByHopRoutingDemand(d , true); 
+//        for (Demand d : layer.demands) if (!d.isAggregatedDemand()) layer.updateHopByHopRoutingDemand(d , true);
+        System.out.println("aaa");
         if (ErrorHandling.isDebugEnabled()) this.checkCachesConsistency();
+        System.out.println("bbb'");
     }
 
     /**
@@ -7381,6 +7464,15 @@ public class NetPlan extends NetworkElement
 
     }
 
+    static long profileTime (String m , long previousTime)
+    {
+    	if (previousTime<0) 
+    		System.out.println(m);
+    	else
+    		System.out.println(m + " - elapsed time " + (System.nanoTime() - previousTime)*1e-6  + " ms");
+    	return System.nanoTime();
+    }
+    
 }
 
 

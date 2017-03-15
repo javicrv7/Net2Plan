@@ -12,20 +12,26 @@
 
 package com.net2plan.interfaces.networkDesign;
 
-import cern.colt.list.tdouble.DoubleArrayList;
-import cern.colt.list.tint.IntArrayList;
-import cern.colt.matrix.tdouble.DoubleFactory2D;
-import cern.colt.matrix.tdouble.DoubleMatrix1D;
-import cern.colt.matrix.tdouble.DoubleMatrix2D;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import com.net2plan.internal.AttributeMap;
 import com.net2plan.internal.ErrorHandling;
 import com.net2plan.utils.Constants.RoutingType;
 import com.net2plan.utils.Pair;
 import com.net2plan.utils.Triple;
 
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
+import cern.colt.list.tdouble.DoubleArrayList;
+import cern.colt.list.tint.IntArrayList;
+import cern.colt.matrix.tdouble.DoubleFactory2D;
+import cern.colt.matrix.tdouble.DoubleMatrix1D;
 
 /** <p>This class contains a representation of a link. A link is characterized by its initial and end node, the network layer it belongs to, 
  * and its capacity, measured in the layer link capacity units. When the routing type at the link layer is {@link com.net2plan.utils.Constants.RoutingType#SOURCE_ROUTING SOURCE_ROUTING}, the link
@@ -652,7 +658,7 @@ public class Link extends NetworkElement
 		if (layer.routingType == RoutingType.HOP_BY_HOP_ROUTING)
 		{
 			final int index_ae = originNode.index;
-			final int index_be = destinationNode.index;
+//			final int index_be = destinationNode.index;
 			final boolean someLinksFailed = !layer.cache_linksDown.isEmpty() || !netPlan.cache_nodesDown.isEmpty();
 			for (Demand d : layer.demands)
 			{
@@ -661,9 +667,8 @@ public class Link extends NetworkElement
 				resPrimary.put(d ,  resThisDemand_primary);
 				resBackup.put(d ,  resThisDemand_backup);
 				
-				final int index_ad = d.getIngressNode().index;
+//				final int index_ad = d.getIngressNode().index;
 				DoubleMatrix1D f_e;// = layer.forwardingRulesNoFailureState_f_de.viewRow(d.index);
-				DoubleMatrix2D fundMatrix;
 				if (someLinksFailed && !assumeNoFailureState)
 				{
 					f_e = layer.forwardingRulesNoFailureState_f_de.viewRow(d.index).copy();
@@ -673,24 +678,27 @@ public class Link extends NetworkElement
 						for (Link e : n.getOutgoingLinks(layer)) f_e.set(e.index, 0);
 						for (Link e : n.getIncomingLinks(layer)) f_e.set(e.index, 0);
 					}
-					fundMatrix = d.computeRoutingFundamentalMatrixDemand(f_e).getFirst();
+					//fundMatrix_ad = d.computeRoutingFundamentalMatrixDemand(f_e).getFirst();
 				}
 				else
 				{
 					f_e = layer.forwardingRulesNoFailureState_f_de.viewRow(d.index);
-					fundMatrix = d.computeRoutingFundamentalMatrixDemand(f_e).getFirst();
+//					fundVector_ad = d.computeRoutingFundamentalMatrixDemand(f_e).getFirst();
 				}
+				DoubleMatrix1D fundVector_ad = layer.computeRoutingFundamentalVector(f_e , d.ingressNode , null).getFirst();
 				/* If this link does not carry traffic of the demand => continue */
-				if (fundMatrix.get(index_ad, index_ae) * f_e.get(index_ae) < tolerance) continue;
+				if (fundVector_ad.get(index_ae) * f_e.get(index_ae) < tolerance) continue;
 				/* See the links that carry traffic of this demand AND such traffic traversed BEFORE or AFTER this link */
 				for (Link candLink : layer.links)
 				{
 					/* Candidate link does not carry demand traffic => continue */
-					if (fundMatrix.get(index_ad, candLink.originNode.index) * f_e.get(candLink.index) == 0) continue; 
+					if (fundVector_ad.get(candLink.originNode.index) * f_e.get(candLink.index) == 0) continue; 
 					/* if the traffic outgoing cand link enters my link, include it */
-					if (fundMatrix.get(candLink.destinationNode.index , index_ae) > tolerance) resThisDemand_primary.add(candLink);
+					DoubleMatrix1D fundVector_candLinkDestination = layer.computeRoutingFundamentalVector(f_e , candLink.destinationNode , null).getFirst();
+					if (fundVector_candLinkDestination.get(index_ae) > tolerance) { resThisDemand_primary.add(candLink); continue; }
 					/* if the traffic outgoing my link link enters cand link, include it */
-					if (fundMatrix.get(index_be , candLink.originNode.index) > tolerance) resThisDemand_primary.add(candLink);
+					DoubleMatrix1D fundVector_linkDestination = layer.computeRoutingFundamentalVector(f_e , destinationNode , null).getFirst();
+					if (fundVector_linkDestination.get(candLink.originNode.index) > tolerance) resThisDemand_primary.add(candLink);
 				}
 			}
 		}

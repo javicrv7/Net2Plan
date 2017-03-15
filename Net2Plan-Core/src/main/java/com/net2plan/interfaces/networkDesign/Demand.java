@@ -12,7 +12,6 @@
 
 package com.net2plan.interfaces.networkDesign;
 
-import java.nio.channels.AcceptPendingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -27,8 +26,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import javax.management.RuntimeErrorException;
-
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 
 import com.google.common.collect.Sets;
@@ -39,7 +36,7 @@ import com.net2plan.utils.Constants.RoutingCycleType;
 import com.net2plan.utils.Constants.RoutingType;
 import com.net2plan.utils.DoubleUtils;
 import com.net2plan.utils.Pair;
-import com.net2plan.utils.Quadruple;
+import com.net2plan.utils.Triple;
 
 import cern.colt.list.tdouble.DoubleArrayList;
 import cern.colt.list.tint.IntArrayList;
@@ -48,6 +45,8 @@ import cern.colt.matrix.tdouble.DoubleFactory2D;
 import cern.colt.matrix.tdouble.DoubleMatrix1D;
 import cern.colt.matrix.tdouble.DoubleMatrix2D;
 import cern.colt.matrix.tdouble.algo.DenseDoubleAlgebra;
+import cern.colt.matrix.tdouble.algo.SparseDoubleAlgebra;
+import cern.colt.matrix.tdouble.impl.SparseCCDoubleMatrix2D;
 import cern.jet.math.tdouble.DoublePlusMultSecond;
 
 /** <p>This class contains a representation of a unicast demand. Unicast demands are defined by its initial and end node, the network layer they belong to, 
@@ -981,6 +980,46 @@ public class Demand extends NetworkElement
 	public String toString () { return "d" + index + " (n" + this.ingressNode.index + " to n" + this.egressNode.index + ")"; }
 //	public String toString () { return "d" + index + " (id " + id + ")"; }
 	
+
+//	public static Pair<DoubleMatrix1D, RoutingCycleType> computeRoutingFundamentalVector(DoubleMatrix1D forwardingRulesToUse_f_e , Node ingressNode , NetworkLayer layer)
+//	{
+//		final int N = ingressNode.netPlan.nodes.size ();
+//		DoubleMatrix1D f_e = forwardingRulesToUse_f_e;
+//		/* q_n1n2 is the fraction of the traffic in n1 that is routed to n2 */
+//		DoubleMatrix2D q_nn = layer.forwardingRules_Aout_ne.zMult(DoubleFactory2D.sparse.diagonal(f_e) , null);
+//		q_nn = q_nn.zMult(layer.forwardingRules_Ain_ne , null , 1 , 0 , false , true);
+////		DoubleMatrix1D sumOut_n = q_nn.zMult(DoubleFactory1D.dense.make(N , 1.0) , null); // sum of the rules outgoing from the node
+////		DoubleMatrix1D i_n = DoubleFactory1D.dense.make (N); // dropped
+////		double s_n = -1;
+////		for (int n = 0 ; n < N ; n ++)
+////		{
+////			if ((sumOut_n.get(n) < -1E-5) || (sumOut_n.get(n) > 1+1E-5)) throw new RuntimeException ("Bad");
+////			if (n == egressNode.index)
+////				s_n = 1 - sumOut_n.get(n);
+////			else
+////				i_n.set (n , 1 - sumOut_n.get(n));
+////		}
+//		DoubleMatrix2D iMinusQ = DoubleFactory2D.sparse.identity(N);
+//		iMinusQ.assign(q_nn , DoublePlusMultSecond.minusMult(1));
+//		DoubleMatrix1D Mv;
+////		try 
+////		{
+//			DoubleMatrix1D e_k = DoubleFactory1D.sparse.make(N); e_k.set(ingressNode.index, 1.0);
+//			Mv = new SparseDoubleAlgebra().solve(iMinusQ.viewDice(), e_k);
+////			M = new DenseDoubleAlgebra().inverse(iMinusQ); 
+////		}
+////		catch(IllegalArgumentException e) { return Quadruple.of (null , RoutingCycleType.CLOSED_CYCLES , s_n , i_n) ; }
+//
+////		for (int contN = 0; contN < N; contN++)
+////			if (Math.abs(M.get(contN, contN) - 1) > 1e-5)
+////				return Pair.of(M, RoutingCycleType.OPEN_CYCLES);
+//		
+//		return Pair.of(Mv, RoutingCycleType.LOOPLESS);
+//		
+//	}
+
+
+	
 	/**
 	 * <p>Computes the fundamental matrix of the absorbing Markov chain in the current hop-by-hop routing, for the
 	 * given demand.</p>
@@ -995,37 +1034,36 @@ public class Demand extends NetworkElement
 	 * @param forwardingRulesToUse_f_e if null, the current forwarding rules in the no failure state are used. If not null, this row defines the forwarding rules to apply in the matrix computation
 	 * @return See description above
 	 */
-	public Quadruple<DoubleMatrix2D, RoutingCycleType,  Double , DoubleMatrix1D> computeRoutingFundamentalMatrixDemand(DoubleMatrix1D forwardingRulesToUse_f_e)
+	public Triple<DoubleMatrix1D, RoutingCycleType,  Double> computeRoutingFundamentalVectorDemand(DoubleMatrix1D forwardingRulesToUse_f_e)
 	{
-		layer.checkRoutingType(RoutingType.HOP_BY_HOP_ROUTING);
-
-		final int N = netPlan.nodes.size ();
 		DoubleMatrix1D f_e = forwardingRulesToUse_f_e == null? layer.forwardingRulesNoFailureState_f_de.viewRow(index) : forwardingRulesToUse_f_e;
-		/* q_n1n2 is the fraction of the traffic in n1 that is routed to n2 */
-		DoubleMatrix2D q_nn = layer.forwardingRules_Aout_ne.zMult(DoubleFactory2D.sparse.diagonal(f_e) , null);
-		q_nn = q_nn.zMult(layer.forwardingRules_Ain_ne , null , 1 , 0 , false , true);
-		DoubleMatrix1D sumOut_n = q_nn.zMult(DoubleFactory1D.dense.make(N , 1.0) , null); // sum of the rules outgoing from the node
-		DoubleMatrix1D i_n = DoubleFactory1D.dense.make (N); // dropped
-		double s_n = -1;
-		for (int n = 0 ; n < N ; n ++)
-		{
-			if ((sumOut_n.get(n) < -1E-5) || (sumOut_n.get(n) > 1+1E-5)) throw new RuntimeException ("Bad");
-			if (n == egressNode.index)
-				s_n = 1 - sumOut_n.get(n);
-			else
-				i_n.set (n , 1 - sumOut_n.get(n));
-		}
-		DoubleMatrix2D iMinusQ = DoubleFactory2D.dense.identity(N);
-		iMinusQ.assign(q_nn , DoublePlusMultSecond.minusMult(1));
-		DoubleMatrix2D M;
-		try { M = new DenseDoubleAlgebra().inverse(iMinusQ); }
-		catch(IllegalArgumentException e) { return Quadruple.of (null , RoutingCycleType.CLOSED_CYCLES , s_n , i_n) ; }
-
-		for (int contN = 0; contN < N; contN++)
-			if (Math.abs(M.get(contN, contN) - 1) > 1e-5)
-				return Quadruple.of(M, RoutingCycleType.OPEN_CYCLES , s_n , i_n);
-		
-		return Quadruple.of(M, RoutingCycleType.LOOPLESS , s_n , i_n);
+		return layer.computeRoutingFundamentalVector(f_e, this.ingressNode, this.egressNode);
+//		layer.checkRoutingType(RoutingType.HOP_BY_HOP_ROUTING);
+//		
+//		final int N = netPlan.nodes.size ();
+//		final int E = layer.links.size();
+//		/* q_n1n2 is the fraction of the traffic in n1 that is routed to n2 */
+//		DoubleMatrix2D q_nn1 = DoubleFactory2D.sparse.make(N,E);
+//		layer.forwardingRules_Aout_ne.zMult(DoubleFactory2D.sparse.diagonal(f_e) , q_nn1);
+//		DoubleMatrix2D q_nn2 = DoubleFactory2D.sparse.make(N,N);
+//		q_nn1.zMult(layer.forwardingRules_Ain_ne , q_nn2 , 1 , 0 , false , true);
+//		final double s_n = 1 - q_nn2.viewRow(egressNode.index).zSum();
+//		SparseCCDoubleMatrix2D iMinusQTransposed = new SparseCCDoubleMatrix2D (N,N);
+//		for (int n = 0; n < N ; n ++) iMinusQTransposed.set(n, n, 1.0);
+//		iMinusQTransposed.assign(q_nn2.viewDice() , DoublePlusMultSecond.minusMult(1));
+//		DoubleMatrix1D Mv;
+//		try 
+//		{
+//			DoubleMatrix1D e_k = DoubleFactory1D.sparse.make(N); e_k.set(ingressNode.index, 1.0);
+//			Mv = new SparseDoubleAlgebra().solve(iMinusQTransposed, e_k);
+//		}
+//		catch(IllegalArgumentException e) { return Triple.of (null , RoutingCycleType.CLOSED_CYCLES , s_n) ; }
+//
+////		for (int contN = 0; contN < N; contN++)
+////			if (Math.abs(M.get(contN, contN) - 1) > 1e-5)
+////				return Quadruple.of(M, RoutingCycleType.OPEN_CYCLES , s_n , i_n);
+//		
+//		return Triple.of(Mv, RoutingCycleType.LOOPLESS , s_n);
 	}
 
 	/**
@@ -1093,7 +1131,6 @@ public class Demand extends NetworkElement
 		if (layer.routingType == RoutingType.HOP_BY_HOP_ROUTING)
 		{
 			final boolean someLinksFailed = !layer.cache_linksDown.isEmpty() || !netPlan.cache_nodesDown.isEmpty();
-			DoubleMatrix1D x_e = null;
 			if (someLinksFailed)
 			{
 				DoubleMatrix1D f_e = layer.forwardingRulesNoFailureState_f_de.viewRow(index).copy();
@@ -1106,20 +1143,20 @@ public class Demand extends NetworkElement
 						for (Link e : n.getIncomingLinks(layer)) f_e.set(e.index, 0);
 					}
 				}
-				Quadruple<DoubleMatrix2D, RoutingCycleType , Double , DoubleMatrix1D> fundMatrixComputation = computeRoutingFundamentalMatrixDemand (f_e);
-				DoubleMatrix2D M = fundMatrixComputation.getFirst ();
-				x_e = DoubleFactory1D.dense.make(layer.links.size());
+				Triple<DoubleMatrix1D,RoutingCycleType,Double> fundMatrixComputation = layer.computeRoutingFundamentalVector(f_e, ingressNode, null);
+				//Quadruple<DoubleMatrix2D, RoutingCycleType , Double , DoubleMatrix1D> fundMatrixComputation = computeRoutingFundamentalMatrixDemand (f_e);
+				DoubleMatrix1D M = fundMatrixComputation.getFirst ();
 				for (Link link : layer.links)
 				{
-					final double newXdeTrafficOneUnit = M.get (ingressNode.index , link.originNode.index) * f_e.get (link.index);
-					x_e.set(link.index , newXdeTrafficOneUnit);
+					final double newXdeTrafficOneUnit = M.get (link.originNode.index) * f_e.get (link.index);
+					if (newXdeTrafficOneUnit > tolerance) resPrimary.add(link);
 				}			
 			}
 			else
 			{
-				x_e = layer.forwardingRulesCurrentFailureState_x_de.viewRow(getIndex()); 
+				DoubleMatrix1D x_e = layer.forwardingRulesCurrentFailureState_x_de.viewRow(getIndex()); 
+				for (int e = 0 ; e < x_e.size() ; e ++) if (x_e.get(e) > tolerance) resPrimary.add(layer.links.get(e));
 			}
-			for (int e = 0 ; e < x_e.size() ; e ++) if (x_e.get(e) > tolerance) resPrimary.add(layer.links.get(e));
 		}
 		else
 		{

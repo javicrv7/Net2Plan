@@ -25,11 +25,16 @@ import com.net2plan.internal.AttributeMap;
 import com.net2plan.libraries.GraphUtils.ClosedCycleRoutingException;
 import com.net2plan.utils.Constants.RoutingCycleType;
 import com.net2plan.utils.Constants.RoutingType;
-import com.net2plan.utils.Quadruple;
+import com.net2plan.utils.Triple;
 
 import cern.colt.matrix.tdouble.DoubleFactory1D;
+import cern.colt.matrix.tdouble.DoubleFactory2D;
 import cern.colt.matrix.tdouble.DoubleMatrix1D;
 import cern.colt.matrix.tdouble.DoubleMatrix2D;
+import cern.colt.matrix.tdouble.algo.SparseDoubleAlgebra;
+import cern.colt.matrix.tdouble.impl.SparseCCDoubleMatrix2D;
+import cern.jet.math.tdouble.DoubleFunctions;
+import cern.jet.math.tdouble.DoublePlusMultSecond;
 
 /** <p>This class contains a representation of a network layer. This is an structure which contains a set of demands, multicast demands and links. 
  * It also is characterized by a routing type, which can be {@link com.net2plan.utils.Constants.RoutingType#SOURCE_ROUTING SOURCE_ROUTING}, or
@@ -276,7 +281,9 @@ public class NetworkLayer extends NetworkElement
 
 	void updateHopByHopRoutingDemandsConsideringPropagation (Collection<Demand> demandCol)
 	{
+		long init = NetPlan.profileTime("init", -1);
 		final Iterator<Demand> it = getMultipleDemandsDownstreamTree(demandCol).iterator();
+		init = NetPlan.profileTime("phase 1", -1);
 		while (it.hasNext())
 		{
 			final Demand d = it.next();
@@ -286,7 +293,9 @@ public class NetworkLayer extends NetworkElement
 				d.offeredTraffic = offeredTraffic;
 			}
 			this.updateHopByHopRoutingDemandNotPropagation(d);
+			init = NetPlan.profileTime("demand d", -1);
 		}
+		init = NetPlan.profileTime("phase 2", -1);
 	}
 
 	
@@ -295,12 +304,10 @@ public class NetworkLayer extends NetworkElement
 	{
 		if (demand.layer != this) throw new RuntimeException ("Bad");
 
-//		System.out.println ("updateHopByHopRoutingDemand demand: " + demand + ", cache links down: " + cache_linksDown);
-
 		/* set 0 in the down links and the link in-out from the down nodes (they do not send traffic) */
 		final double h_d = demand.getOfferedTraffic();
 		DoubleMatrix1D fowardingRulesThisFailureState_f_e;
-		DoubleMatrix2D M;
+		DoubleMatrix1D M;
 		if (h_d == 0)
 		{
 			M = null;
@@ -328,50 +335,31 @@ public class NetworkLayer extends NetworkElement
 				}
 			}
 
-//		System.out.println ("updateHopByHopRoutingDemand demand: " + demand + ", forwardingthisdemand_e: " + forwardingRules_f_de.viewRow(demand.index));
-
-			Quadruple<DoubleMatrix2D, RoutingCycleType , Double , DoubleMatrix1D> fundMatrixComputation = demand.computeRoutingFundamentalMatrixDemand (fowardingRulesThisFailureState_f_e);
+			Triple<DoubleMatrix1D, RoutingCycleType , Double> fundMatrixComputation = demand.computeRoutingFundamentalVectorDemand (fowardingRulesThisFailureState_f_e);
 			M = fundMatrixComputation.getFirst ();
-			double s_egressNode = fundMatrixComputation.getThird();
-			DoubleMatrix1D dropFraction_n = fundMatrixComputation.getFourth();
-	
+			final double s_egressNode = fundMatrixComputation.getThird();
 			/* update the demand routing cycle information */
 			demand.routingCycleType = fundMatrixComputation.getSecond();
 			if (demand.routingCycleType == RoutingCycleType.CLOSED_CYCLES) 
 				throw new ClosedCycleRoutingException("Closed routing cycle for demand " + demand); 
 			
 			/* update the demand carried traffic */
-			demand.carriedTraffic = demand.getOfferedTraffic() * M.get(demand.ingressNode.index , demand.egressNode.index) * s_egressNode;
+			demand.carriedTraffic = demand.getOfferedTraffic() * M.get(demand.egressNode.index) * s_egressNode;
 			if (demand.coupledUpperLayerLink != null) demand.coupledUpperLayerLink.capacity = demand.carriedTraffic;
 	
-			if (demand.carriedTraffic > demand.getOfferedTraffic() + 1E-5) throw new RuntimeException ("Bad");
+			if (demand.carriedTraffic > demand.getOfferedTraffic() + 1E-4) throw new RuntimeException ("Bad");
 		}		
-
 		/* update the carried traffic of this demand in each link */
 		for (Link link : links)
 		{
 			final double oldXde = this.forwardingRulesCurrentFailureState_x_de.get (demand.index , link.index);
-			final double newXde = h_d == 0? 0 : h_d * M.get (demand.ingressNode.index , link.originNode.index) * fowardingRulesThisFailureState_f_e.get (link.index);
+			final double newXde = h_d == 0? 0 : h_d * M.get (link.originNode.index) * fowardingRulesThisFailureState_f_e.get (link.index);
 			if (newXde < -1E-5) throw new RuntimeException ("Bad");
 			this.forwardingRulesCurrentFailureState_x_de.set (demand.index , link.index , newXde);
 			link.cache_carriedTraffic += newXde - oldXde; // in hop-by-hop carried traffic is the same as occupied capacity
 			link.cache_occupiedCapacity += newXde - oldXde;
 			if ((newXde > 1e-3) && (!link.isUp)) throw new RuntimeException ("Bad");
 		}
-
-//		if (propagateToDownStreamDemands)
-//		{
-//			
-////			final DirectedAcyclicGraph<Demand, Object> downstreamDemands = demand.getDownstreamDemandsTree();
-////			final Iterator<Demand> iteratorOrderedDemandUpdate = downstreamDemands.iterator();
-////			while (iteratorOrderedDemandUpdate.hasNext())
-////			{
-////				final Demand d = iteratorOrderedDemandUpdate.next();
-////				if (d != demand) this.updateHopByHopRoutingDemand(d , false);
-////			}
-//		}
-		
-//		System.out.println ("updateHopByHopRoutingDemand demand: " + demand + ", this demand x_e: " + forwardingRules_x_de.viewRow(demand.index));
 	}
 
 	DirectedAcyclicGraph<Demand,Object> getMultipleDemandsDownstreamTree (Collection<Demand> rootDemands)
@@ -427,5 +415,42 @@ public class NetworkLayer extends NetworkElement
 		for (MulticastTree tree : cache_multicastTreesDown) if (!tree.isDown()) throw new RuntimeException ("Bad");
 	}
 
+	/**
+	 * <p>Computes the row of the fundamental matrix of the absorbing Markov chain in the current hop-by-hop routing, for the
+	 * given ingress node.</p>
+	 * <p>Returns a {@link com.net2plan.utils.Triple Triple} object where:</p>
+	 * <ol type="i">
+	 *     <li>the row associated to the ingress node fundamental matrix (1xN, where N is the number of nodes)</li>
+	 *     <li>the type of routing of the demand (loopless, or close cycles. Open cycles are not detected)</li>
+	 *     <li>the fraction of demand traffic that arrives to the destination node and is absorbed there (it may be less than one if the routing has cycles that involve the destination node)</li>
+	 * </ol>
+	 * <p><b>Important: </b>If the routing type is not {@link com.net2plan.utils.Constants.RoutingType#HOP_BY_HOP_ROUTING HOP_BY_HOP_ROUTING}, an exception is thrown.</p>
+	 * @param forwardingRulesToUse_f_e if null, the current forwarding rules in the no failure state are used. If not null, this row defines the forwarding rules to apply in the matrix computation
+	 * @return See description above
+	 */
+	public Triple<DoubleMatrix1D, RoutingCycleType,  Double> computeRoutingFundamentalVector(DoubleMatrix1D forwardingRulesToUse_f_e , Node ingressNode , Node egressNode)
+	{
+		this.checkRoutingType(RoutingType.HOP_BY_HOP_ROUTING);
+
+		final int N = ingressNode.netPlan.nodes.size ();
+		final int E = links.size();
+		DoubleMatrix1D f_e = forwardingRulesToUse_f_e;
+		DoubleMatrix2D q_nn1 = DoubleFactory2D.sparse.make(N,E);
+		forwardingRules_Ain_ne.zMult(DoubleFactory2D.sparse.diagonal(f_e) , q_nn1);
+		DoubleMatrix2D q_nn2transpose = new SparseCCDoubleMatrix2D (N,N);//DoubleFactory2D.sparse.make(N,N);
+		q_nn1.zMult(forwardingRules_Aout_ne , q_nn2transpose , 1 , 0 , false , true);
+		final double s_n = egressNode == null? -1 : 1 - q_nn2transpose.viewColumn(egressNode.index).zSum();
+		q_nn2transpose.assign(DoubleFunctions.neg);
+		for (int n = 0; n < N ; n ++) q_nn2transpose.setQuick(n, n, q_nn2transpose.getQuick(n, n) + 1);//iMinusQTransposed.set(n, n, 1.0);
+		DoubleMatrix1D Mv;
+		try 
+		{
+			DoubleMatrix1D e_k = DoubleFactory1D.sparse.make(N); e_k.set(ingressNode.index, 1.0);
+			Mv = new SparseDoubleAlgebra().solve(q_nn2transpose, e_k);
+		}
+		catch(IllegalArgumentException e) { e.printStackTrace(); return Triple.of (null , RoutingCycleType.CLOSED_CYCLES , s_n) ; }
+
+		return Triple.of(Mv, RoutingCycleType.LOOPLESS , s_n);
+	}
 
 }
