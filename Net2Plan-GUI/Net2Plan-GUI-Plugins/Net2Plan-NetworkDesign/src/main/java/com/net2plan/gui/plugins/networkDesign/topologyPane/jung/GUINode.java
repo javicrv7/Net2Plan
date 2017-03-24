@@ -50,7 +50,7 @@ public class GUINode
     {
         this.layer = layer;
         this.npNode = npNode;
-//        if (!callback.getVisualizationState().isLayerVisibleInCanvas(layer)) throw new RuntimeException ("Bad");
+//        if (!callback.getVisualizationState().isLayerVisible(layer)) throw new RuntimeException ("Bad");
 
 		/* defaults */
         this.borderPaint = VisualizationConstants.DEFAULT_GUINODE_COLOR;
