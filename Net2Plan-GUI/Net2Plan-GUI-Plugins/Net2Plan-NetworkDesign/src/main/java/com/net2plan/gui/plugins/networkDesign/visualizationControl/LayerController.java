@@ -92,38 +92,17 @@ public class LayerController
     @Nullable
     public NetworkLayer getLayerAtPosition(final int layerPosition, final boolean considerNonVisible)
     {
-        if (layerPosition < 0 || layerPosition >= getCanvasNumberOfVisibleLayers) return null;
-
-        return considerNonVisible ? 
+        if (layerPosition < 0 || layerPosition >= mediator.getNumberOfVisibleLayers()) return null;
+        return considerNonVisible ? MapUtils.invertMap(visualizationSnapshot.getMapCanvasLayerVisualizationOrder()).get(layerPosition) : MapUtils.invertMap(cache_mapLayerOrderNoInvisible).get(layerPosition);
     }
 
-    public NetworkLayer getCanvasNetworkLayerAtVisualizationOrderRemovingNonVisible(int trueVisualizationOrder)
+    public int getLayerPosition(@NotNull final NetworkLayer layer, final boolean considerNonVisible)
     {
-        if (trueVisualizationOrder < 0) throw new RuntimeException("");
-        if (trueVisualizationOrder >= getCanvasNumberOfVisibleLayers()) throw new RuntimeException("");
-        return cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.inverseBidiMap().get(trueVisualizationOrder);
-    }
+        if (layer == null) throw new RuntimeException("Layer cannot be refered to null.");
+        Integer position = considerNonVisible ? visualizationSnapshot.getCanvasLayerVisualizationOrder(layer) : cache_mapLayerOrderNoInvisible.get(layer);
+        if (position == null) throw new RuntimeException("Unknown layer: " + layer);
 
-    public NetworkLayer getCanvasNetworkLayerAtVisualizationOrderNotRemovingNonVisible(int visualizationOrder)
-    {
-        if (visualizationOrder < 0) throw new RuntimeException("");
-        if (visualizationOrder >= mediator.getNetPlan().getNumberOfLayers())
-            throw new RuntimeException("");
-        return MapUtils.invertMap(visualizationSnapshot.getMapCanvasLayerVisualizationOrder()).get(visualizationOrder);
-    }
-
-    public int getCanvasVisualizationOrderRemovingNonVisible(NetworkLayer layer)
-    {
-        Integer res = cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.get(layer);
-        if (res == null) throw new RuntimeException("");
-        return res;
-    }
-
-    public int getCanvasVisualizationOrderNotRemovingNonVisible(NetworkLayer layer)
-    {
-        Integer res = visualizationSnapshot.getCanvasLayerVisualizationOrder(layer);
-        if (res == null) throw new RuntimeException();
-        return res;
+        return position;
     }
 
     public static Pair<BidiMap<NetworkLayer, Integer>, Map<NetworkLayer, Boolean>> generateCanvasDefaultVisualizationLayerInfo(NetPlan np)
@@ -141,8 +120,8 @@ public class LayerController
 
     public Pair<BidiMap<NetworkLayer, Integer>, Map<NetworkLayer, Boolean>> suggestCanvasUpdatedVisualizationLayerInfoForNewDesign(Set<NetworkLayer> newNetworkLayers)
     {
-        final Map<NetworkLayer, Boolean> oldLayerVisibilityMap = getCanvasLayerVisibilityMap();
-        final BidiMap<NetworkLayer, Integer> oldLayerOrderMap = new DualHashBidiMap<>(getCanvasLayerOrderIndexMap(true));
+        final Map<NetworkLayer, Boolean> oldLayerVisibilityMap = visualizationSnapshot.getMapCanvasLayerVisibility();
+        final BidiMap<NetworkLayer, Integer> oldLayerOrderMap = new DualHashBidiMap<>(visualizationSnapshot.getMapCanvasLayerVisualizationOrder());
         final Map<NetworkLayer, Boolean> newLayerVisibilityMap = new HashMap<>();
         final BidiMap<NetworkLayer, Integer> newLayerOrderMap = new DualHashBidiMap<>();
         for (int oldVisibilityOrderIndex = 0; oldVisibilityOrderIndex < oldLayerOrderMap.size(); oldVisibilityOrderIndex++)

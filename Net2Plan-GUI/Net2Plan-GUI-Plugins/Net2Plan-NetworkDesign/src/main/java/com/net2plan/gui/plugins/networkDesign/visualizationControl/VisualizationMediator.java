@@ -128,9 +128,9 @@ public class VisualizationMediator
         return this.getNetPlan().isModifiable();
     }
 
-    VisualizationSnapshot getSnapshot()
+    public int getNumberOfVisibleLayers()
     {
-        return visualizationSnapshot;
+        return canvasController.getCanvasNumberOfVisibleLayers();
     }
 
     // TODO: Test
