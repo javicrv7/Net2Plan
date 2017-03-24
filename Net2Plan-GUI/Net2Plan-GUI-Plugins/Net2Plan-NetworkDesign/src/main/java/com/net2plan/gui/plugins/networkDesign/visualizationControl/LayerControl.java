@@ -88,7 +88,6 @@ public class LayerControl
         return visualizationSnapshot.getCanvasLinkVisibility(layer);
     }
 
-    @Nullable
     public NetworkLayer getLayerAtPosition(final int layerPosition, final boolean considerNonVisible)
     {
         if (layerPosition < 0 || layerPosition >= mediator.getNumberOfVisibleLayers()) return null;
@@ -102,6 +101,27 @@ public class LayerControl
         if (position == null) throw new RuntimeException("Unknown layer: " + layer);
 
         return position;
+    }
+
+    List<NetworkLayer> getLayersInVisualizationOrder(boolean includeNonVisible)
+    {
+        Map<Integer, NetworkLayer> map = includeNonVisible ? MapUtils.invertMap(visualizationSnapshot.getMapCanvasLayerVisualizationOrder()) : MapUtils.invertMap(cache_mapLayerOrderNoInvisible);
+
+        List<NetworkLayer> res = new ArrayList<>();
+        for (int vIndex = 0; vIndex < mediator.getNetPlan().getNumberOfLayers(); vIndex++)
+            res.add(map.get(vIndex));
+
+        return res;
+    }
+
+    Map<NetworkLayer, Integer> getLayerOrderMap(boolean includeNonVisible)
+    {
+        return includeNonVisible ? visualizationSnapshot.getMapCanvasLayerVisualizationOrder() : cache_mapLayerOrderNoInvisible;
+    }
+
+    int getNumberOfVisibleLayers()
+    {
+        return cache_mapLayerOrderNoInvisible.size();
     }
 
     public static Pair<BidiMap<NetworkLayer, Integer>, Map<NetworkLayer, Boolean>> generateCanvasDefaultVisualizationLayerInfo(NetPlan np)

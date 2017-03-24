@@ -39,7 +39,6 @@ import java.util.Map;
 public class NetPlanControl
 {
     private NetPlan netPlan;
-    private boolean isNetPlanEditable;
 
     private ITableRowFilter tableRowFilter;
 
@@ -63,16 +62,6 @@ public class NetPlanControl
     public void setNetPlan(NetPlan netPlan)
     {
         this.netPlan = netPlan;
-    }
-
-    public boolean isNetPlanEditable()
-    {
-        return isNetPlanEditable;
-    }
-
-    public void setNetPlanEditable(boolean netPlanEditable)
-    {
-        isNetPlanEditable = netPlanEditable;
     }
 
     public ITableRowFilter getTableRowFilter()

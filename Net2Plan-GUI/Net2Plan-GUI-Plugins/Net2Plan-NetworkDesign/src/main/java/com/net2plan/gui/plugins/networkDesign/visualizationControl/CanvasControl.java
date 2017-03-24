@@ -21,8 +21,6 @@ import com.net2plan.interfaces.networkDesign.*;
 import com.net2plan.utils.Pair;
 import com.sun.istack.internal.NotNull;
 import org.apache.commons.collections15.BidiMap;
-import org.apache.commons.collections15.MapUtils;
-import org.apache.commons.collections15.bidimap.DualHashBidiMap;
 
 import java.awt.*;
 import java.util.*;
@@ -46,6 +44,7 @@ class CanvasControl
     private boolean showNonConnectedNodes;
 
     private Map<Node, Boolean> nodeVisibilityMap;
+    private Map<Link, Boolean> linkVisibilityMap;
 
     private float linkWidthIncreaseFactorRespectToDefault;
     private float nodeSizeIncreaseFactorRespectToDefault;
@@ -53,7 +52,6 @@ class CanvasControl
     /* These need is recomputed inside a rebuild */
     private Map<Node, Set<GUILink>> cache_canvasIntraNodeGUILinks;
     private Map<Link, GUILink> cache_canvasRegularLinkMap;
-    private BidiMap<NetworkLayer, Integer> cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible; // as many elements as visible layers
     private Map<Node, Map<Pair<Integer, Integer>, GUILink>> cache_mapNode2IntraNodeCanvasGUILinkMap; // integers are orders of REAL VISIBLE LAYERS
     private Map<Node, List<GUINode>> cache_mapNode2ListVerticallyStackedGUINodes;
 
@@ -71,6 +69,7 @@ class CanvasControl
         this.showLayerPropagation = true;
 
         this.nodeVisibilityMap = new HashMap<>();
+        this.linkVisibilityMap = new HashMap<>();
 
         this.linkWidthIncreaseFactorRespectToDefault = 1;
         this.nodeSizeIncreaseFactorRespectToDefault = 1;
@@ -106,7 +105,7 @@ class CanvasControl
             cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.get(gl.getOriginNode());
             boolean atLeastOneLowerLayerVisible = false;
             for (int vIndex = 0; vIndex <= lowerVIndex; vIndex++)
-                if (isVisible(getCanvasAssociatedGUINode(node, getCanvasNetworkLayerAtVisualizationOrderRemovingNonVisible(vIndex))))
+                if (isVisible(getAssociatedGUINode(node, getCanvasNetworkLayerAtVisualizationOrderRemovingNonVisible(vIndex))))
                 {
                     atLeastOneLowerLayerVisible = true;
                     break;
@@ -114,7 +113,7 @@ class CanvasControl
             if (!atLeastOneLowerLayerVisible) return false;
             boolean atLeastOneUpperLayerVisible = false;
             for (int vIndex = upperVIndex; vIndex < getCanvasNumberOfVisibleLayers(); vIndex++)
-                if (isVisible(getCanvasAssociatedGUINode(node, getCanvasNetworkLayerAtVisualizationOrderRemovingNonVisible(vIndex))))
+                if (isVisible(getAssociatedGUINode(node, getCanvasNetworkLayerAtVisualizationOrderRemovingNonVisible(vIndex))))
                 {
                     atLeastOneUpperLayerVisible = true;
                     break;
@@ -132,144 +131,54 @@ class CanvasControl
         }
     }
 
-    void hideOnCanvas(Node n)
+    void show(Node n)
     {
-        nodesToHideInCanvasAsMandatedByUserInTable.add(n);
+        nodeVisibilityMap.put(n, true);
     }
 
-    void showOnCanvas(Node n)
+    void show(Link e)
     {
-        if (nodesToHideInCanvasAsMandatedByUserInTable.contains(n))
-            nodesToHideInCanvasAsMandatedByUserInTable.remove(n);
+        linkVisibilityMap.put(e, true);
     }
 
-    boolean isHiddenOnCanvas(Node n)
+    void hide(Node n)
     {
-        return nodesToHideInCanvasAsMandatedByUserInTable.contains(n);
+        nodeVisibilityMap.put(n, false);
     }
 
-    void hideOnCanvas(Link e)
+    void hide(Link e)
     {
-        linksToHideInCanvasAsMandatedByUserInTable.add(e);
+        linkVisibilityMap.put(e, true);
     }
 
-    void showOnCanvas(Link e)
+    boolean isHidden(Node n)
     {
-        if (linksToHideInCanvasAsMandatedByUserInTable.contains(e))
-            linksToHideInCanvasAsMandatedByUserInTable.remove(e);
+        return nodeVisibilityMap.get(n);
     }
 
-    boolean isHiddenOnCanvas(Link e)
+    boolean isHidden(Link e)
     {
-        return linksToHideInCanvasAsMandatedByUserInTable.contains(e);
+        return linkVisibilityMap.get(e);
     }
 
-    List<NetworkLayer> getCanvasLayersInVisualizationOrder(boolean includeNonVisible)
-    {
-        BidiMap<Integer, NetworkLayer> map = includeNonVisible ? new DualHashBidiMap<>(MapUtils.invertMap(visualizationSnapshot.getMapCanvasLayerVisualizationOrder())) : cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.inverseBidiMap();
-        List<NetworkLayer> res = new ArrayList<>();
-        for (int vIndex = 0; vIndex < this.getNetPlan().getNumberOfLayers(); vIndex++)
-            res.add(map.get(vIndex));
-        return res;
-    }
-
-    Map<NetworkLayer, Integer> getCanvasLayerOrderIndexMap(boolean includeNonVisible)
-    {
-        return includeNonVisible ? visualizationSnapshot.getMapCanvasLayerVisualizationOrder() : cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible;
-    }
-
-    List<GUINode> getCanvasVerticallyStackedGUINodes(Node n)
+    List<GUINode> getStackedGUINodes(Node n)
     {
         return cache_mapNode2ListVerticallyStackedGUINodes.get(n);
     }
 
-    GUINode getCanvasAssociatedGUINode(Node n, NetworkLayer layer)
+    GUINode getAssociatedGUINode(Node n, NetworkLayer layer)
     {
         final Integer trueVisualizationIndex = cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.get(layer);
         if (trueVisualizationIndex == null) return null;
-        return getCanvasVerticallyStackedGUINodes(n).get(trueVisualizationIndex);
+        return getStackedGUINodes(n).get(trueVisualizationIndex);
     }
 
-    GUILink getCanvasAssociatedGUILink(Link e)
+    GUILink getAssociatedGUILink(Link e)
     {
         return cache_canvasRegularLinkMap.get(e);
     }
 
-    Pair<Set<GUILink>, Set<GUILink>> getCanvasAssociatedGUILinksIncludingCoupling(Link e, boolean regularLinkIsPrimary)
-    {
-        Set<GUILink> resPrimary = new HashSet<>();
-        Set<GUILink> resBackup = new HashSet<>();
-        if (regularLinkIsPrimary) resPrimary.add(getCanvasAssociatedGUILink(e));
-        else resBackup.add(getCanvasAssociatedGUILink(e));
-        if (!e.isCoupled()) return Pair.of(resPrimary, resBackup);
-        if (e.getCoupledDemand() != null)
-        {
-            /* add the intranode links */
-            final NetworkLayer upperLayer = e.getLayer();
-            final NetworkLayer downLayer = e.getCoupledDemand().getLayer();
-            if (regularLinkIsPrimary)
-            {
-                resPrimary.addAll(getCanvasIntraNodeGUILinkSequence(e.getOriginNode(), upperLayer, downLayer));
-                resPrimary.addAll(getCanvasIntraNodeGUILinkSequence(e.getDestinationNode(), downLayer, upperLayer));
-            } else
-            {
-                resBackup.addAll(getCanvasIntraNodeGUILinkSequence(e.getOriginNode(), upperLayer, downLayer));
-                resBackup.addAll(getCanvasIntraNodeGUILinkSequence(e.getDestinationNode(), downLayer, upperLayer));
-            }
-
-			/* add the regular links */
-            Pair<Set<Link>, Set<Link>> traversedLinks = e.getCoupledDemand().getLinksThisLayerPotentiallyCarryingTraffic(true);
-            for (Link ee : traversedLinks.getFirst())
-            {
-                Pair<Set<GUILink>, Set<GUILink>> pairGuiLinks = getCanvasAssociatedGUILinksIncludingCoupling(ee, true);
-                if (regularLinkIsPrimary) resPrimary.addAll(pairGuiLinks.getFirst());
-                else resBackup.addAll(pairGuiLinks.getFirst());
-                resBackup.addAll(pairGuiLinks.getSecond());
-            }
-            for (Link ee : traversedLinks.getSecond())
-            {
-                Pair<Set<GUILink>, Set<GUILink>> pairGuiLinks = getCanvasAssociatedGUILinksIncludingCoupling(ee, false);
-                resPrimary.addAll(pairGuiLinks.getFirst());
-                resBackup.addAll(pairGuiLinks.getSecond());
-            }
-        } else if (e.getCoupledMulticastDemand() != null)
-        {
-            /* add the intranode links */
-            final NetworkLayer upperLayer = e.getLayer();
-            final MulticastDemand lowerLayerDemand = e.getCoupledMulticastDemand();
-            final NetworkLayer downLayer = lowerLayerDemand.getLayer();
-            if (regularLinkIsPrimary)
-            {
-                resPrimary.addAll(getCanvasIntraNodeGUILinkSequence(lowerLayerDemand.getIngressNode(), upperLayer, downLayer));
-                resPrimary.addAll(getCanvasIntraNodeGUILinkSequence(lowerLayerDemand.getIngressNode(), downLayer, upperLayer));
-                for (Node n : lowerLayerDemand.getEgressNodes())
-                {
-                    resPrimary.addAll(getCanvasIntraNodeGUILinkSequence(n, upperLayer, downLayer));
-                    resPrimary.addAll(getCanvasIntraNodeGUILinkSequence(n, downLayer, upperLayer));
-                }
-            } else
-            {
-                resBackup.addAll(getCanvasIntraNodeGUILinkSequence(lowerLayerDemand.getIngressNode(), upperLayer, downLayer));
-                resBackup.addAll(getCanvasIntraNodeGUILinkSequence(lowerLayerDemand.getIngressNode(), downLayer, upperLayer));
-                for (Node n : lowerLayerDemand.getEgressNodes())
-                {
-                    resBackup.addAll(getCanvasIntraNodeGUILinkSequence(n, upperLayer, downLayer));
-                    resBackup.addAll(getCanvasIntraNodeGUILinkSequence(n, downLayer, upperLayer));
-                }
-            }
-
-            for (MulticastTree t : lowerLayerDemand.getMulticastTrees())
-                for (Link ee : t.getLinkSet())
-                {
-                    Pair<Set<GUILink>, Set<GUILink>> pairGuiLinks = getCanvasAssociatedGUILinksIncludingCoupling(ee, true);
-                    resPrimary.addAll(pairGuiLinks.getFirst());
-                    resBackup.addAll(pairGuiLinks.getSecond());
-                }
-        }
-        return Pair.of(resPrimary, resBackup);
-    }
-
-    GUILink getCanvasIntraNodeGUILink(Node n, NetworkLayer from, NetworkLayer to)
+    GUILink getIntraNodeGUILink(Node n, NetworkLayer from, NetworkLayer to)
     {
         final Integer fromRealVIndex = cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.get(from);
         final Integer toRealVIndex = cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.get(to);
@@ -277,15 +186,15 @@ class CanvasControl
         return cache_mapNode2IntraNodeCanvasGUILinkMap.get(n).get(Pair.of(fromRealVIndex, toRealVIndex));
     }
 
-    Set<GUILink> getCanvasIntraNodeGUILinks(Node n)
+    Set<GUILink> getIntraNodeGUILinks(Node n)
     {
         return cache_canvasIntraNodeGUILinks.get(n);
     }
 
-    List<GUILink> getCanvasIntraNodeGUILinkSequence(Node n, NetworkLayer from, NetworkLayer to)
+    List<GUILink> getIntraNodeGUILinkSequence(Node n, NetworkLayer from, NetworkLayer to)
     {
-        if (from.getNetPlan() != this.getNetPlan()) throw new RuntimeException("Bad");
-        if (to.getNetPlan() != this.getNetPlan()) throw new RuntimeException("Bad");
+        if (from.getNetPlan() != mediator.getNetPlan()) throw new RuntimeException("Bad");
+        if (to.getNetPlan() != mediator.getNetPlan()) throw new RuntimeException("Bad");
         final Integer fromRealVIndex = cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.get(from);
         final Integer toRealVIndex = cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.get(to);
 
@@ -305,7 +214,7 @@ class CanvasControl
         return res;
     }
 
-    boolean decreaseCanvasFontSizeAll()
+    boolean decreaseFontSizeAll()
     {
         boolean changedSize = false;
         for (GUINode gn : getCanvasAllGUINodes())
@@ -313,27 +222,27 @@ class CanvasControl
         return changedSize;
     }
 
-    void increaseCanvasFontSizeAll()
+    void increaseFontSizeAll()
     {
         for (GUINode gn : getCanvasAllGUINodes())
             gn.increaseFontSize();
     }
 
-    void decreaseCanvasNodeSizeAll()
+    void decreaseNodeSizeAll()
     {
         nodeSizeIncreaseFactorRespectToDefault *= VisualizationConstants.SCALE_OUT;
         for (GUINode gn : getCanvasAllGUINodes())
             gn.setIconHeightInNonActiveLayer(gn.getIconHeightInNotActiveLayer() * VisualizationConstants.SCALE_OUT);
     }
 
-    void increaseCanvasNodeSizeAll()
+    void increaseNodeSizeAll()
     {
         nodeSizeIncreaseFactorRespectToDefault *= VisualizationConstants.SCALE_IN;
         for (GUINode gn : getCanvasAllGUINodes())
             gn.setIconHeightInNonActiveLayer(gn.getIconHeightInNotActiveLayer() * VisualizationConstants.SCALE_IN);
     }
 
-    void decreaseCanvasLinkSizeAll()
+    void decreaseLinkSizeAll()
     {
         final float multFactor = VisualizationConstants.SCALE_OUT;
         linkWidthIncreaseFactorRespectToDefault *= multFactor;
@@ -341,57 +250,12 @@ class CanvasControl
             e.setEdgeStroke(resizedBasicStroke(e.getStrokeIfActiveLayer(), multFactor), resizedBasicStroke(e.getStrokeIfNotActiveLayer(), multFactor));
     }
 
-    void increaseCanvasLinkSizeAll()
+    void increaseLinkSizeAll()
     {
         final float multFactor = VisualizationConstants.SCALE_IN;
         linkWidthIncreaseFactorRespectToDefault *= multFactor;
         for (GUILink e : getCanvasAllGUILinks(true, true))
             e.setEdgeStroke(resizedBasicStroke(e.getStrokeIfActiveLayer(), multFactor), resizedBasicStroke(e.getStrokeIfNotActiveLayer(), multFactor));
-    }
-
-    int getCanvasNumberOfVisibleLayers()
-    {
-        return cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.size();
-    }
-
-    boolean isShowInCanvasInterLayerLinks()
-    {
-        return canvasController.isShowInterLayerLinks();
-    }
-
-    void setShowInCanvasInterLayerLinks(boolean showInterLayerLinks)
-    {
-        canvasController.setShowInterLayerLinks(showInterLayerLinks);
-    }
-
-    boolean isCanvasShowNodeNames()
-    {
-        return canvasController.isShowNodeNames();
-    }
-
-    void setCanvasShowNodeNames(boolean showNodeNames)
-    {
-        canvasController.setShowNodeNames(showNodeNames);
-    }
-
-    boolean isCanvasShowLinkLabels()
-    {
-        return canvasController.isShowLinkLabels();
-    }
-
-    void setCanvasShowLinkLabels(boolean showLinkLabels)
-    {
-        canvasController.setShowLinkLabels(showLinkLabels);
-    }
-
-    boolean isCanvasShowNonConnectedNodes()
-    {
-        return canvasController.isShowNonConnectedNodes();
-    }
-
-    void setCanvasShowNonConnectedNodes(boolean showNonConnectedNodes)
-    {
-        canvasController.setShowNonConnectedNodes(showNonConnectedNodes);
     }
 
     Set<GUILink> getCanvasAllGUILinks(boolean includeRegularLinks, boolean includeInterLayerLinks)
@@ -410,7 +274,6 @@ class CanvasControl
         for (List<GUINode> list : this.cache_mapNode2ListVerticallyStackedGUINodes.values()) res.addAll(list);
         return res;
     }
-
 
     double getCanvasDefaultVerticalDistanceForInterLayers()
     {
@@ -573,5 +436,79 @@ class CanvasControl
     private void setCurrentDefaultEdgeStroke(GUILink e, BasicStroke a, BasicStroke na)
     {
         e.setEdgeStroke(resizedBasicStroke(a, linkWidthIncreaseFactorRespectToDefault), resizedBasicStroke(na, linkWidthIncreaseFactorRespectToDefault));
+    }
+
+    private Pair<Set<GUILink>, Set<GUILink>> getCanvasAssociatedGUILinksIncludingCoupling(Link e, boolean regularLinkIsPrimary)
+    {
+        Set<GUILink> resPrimary = new HashSet<>();
+        Set<GUILink> resBackup = new HashSet<>();
+        if (regularLinkIsPrimary) resPrimary.add(getAssociatedGUILink(e));
+        else resBackup.add(getAssociatedGUILink(e));
+        if (!e.isCoupled()) return Pair.of(resPrimary, resBackup);
+        if (e.getCoupledDemand() != null)
+        {
+            /* add the intranode links */
+            final NetworkLayer upperLayer = e.getLayer();
+            final NetworkLayer downLayer = e.getCoupledDemand().getLayer();
+            if (regularLinkIsPrimary)
+            {
+                resPrimary.addAll(getIntraNodeGUILinkSequence(e.getOriginNode(), upperLayer, downLayer));
+                resPrimary.addAll(getIntraNodeGUILinkSequence(e.getDestinationNode(), downLayer, upperLayer));
+            } else
+            {
+                resBackup.addAll(getIntraNodeGUILinkSequence(e.getOriginNode(), upperLayer, downLayer));
+                resBackup.addAll(getIntraNodeGUILinkSequence(e.getDestinationNode(), downLayer, upperLayer));
+            }
+
+			/* add the regular links */
+            Pair<Set<Link>, Set<Link>> traversedLinks = e.getCoupledDemand().getLinksThisLayerPotentiallyCarryingTraffic(true);
+            for (Link ee : traversedLinks.getFirst())
+            {
+                Pair<Set<GUILink>, Set<GUILink>> pairGuiLinks = getCanvasAssociatedGUILinksIncludingCoupling(ee, true);
+                if (regularLinkIsPrimary) resPrimary.addAll(pairGuiLinks.getFirst());
+                else resBackup.addAll(pairGuiLinks.getFirst());
+                resBackup.addAll(pairGuiLinks.getSecond());
+            }
+            for (Link ee : traversedLinks.getSecond())
+            {
+                Pair<Set<GUILink>, Set<GUILink>> pairGuiLinks = getCanvasAssociatedGUILinksIncludingCoupling(ee, false);
+                resPrimary.addAll(pairGuiLinks.getFirst());
+                resBackup.addAll(pairGuiLinks.getSecond());
+            }
+        } else if (e.getCoupledMulticastDemand() != null)
+        {
+            /* add the intranode links */
+            final NetworkLayer upperLayer = e.getLayer();
+            final MulticastDemand lowerLayerDemand = e.getCoupledMulticastDemand();
+            final NetworkLayer downLayer = lowerLayerDemand.getLayer();
+            if (regularLinkIsPrimary)
+            {
+                resPrimary.addAll(getIntraNodeGUILinkSequence(lowerLayerDemand.getIngressNode(), upperLayer, downLayer));
+                resPrimary.addAll(getIntraNodeGUILinkSequence(lowerLayerDemand.getIngressNode(), downLayer, upperLayer));
+                for (Node n : lowerLayerDemand.getEgressNodes())
+                {
+                    resPrimary.addAll(getIntraNodeGUILinkSequence(n, upperLayer, downLayer));
+                    resPrimary.addAll(getIntraNodeGUILinkSequence(n, downLayer, upperLayer));
+                }
+            } else
+            {
+                resBackup.addAll(getIntraNodeGUILinkSequence(lowerLayerDemand.getIngressNode(), upperLayer, downLayer));
+                resBackup.addAll(getIntraNodeGUILinkSequence(lowerLayerDemand.getIngressNode(), downLayer, upperLayer));
+                for (Node n : lowerLayerDemand.getEgressNodes())
+                {
+                    resBackup.addAll(getIntraNodeGUILinkSequence(n, upperLayer, downLayer));
+                    resBackup.addAll(getIntraNodeGUILinkSequence(n, downLayer, upperLayer));
+                }
+            }
+
+            for (MulticastTree t : lowerLayerDemand.getMulticastTrees())
+                for (Link ee : t.getLinkSet())
+                {
+                    Pair<Set<GUILink>, Set<GUILink>> pairGuiLinks = getCanvasAssociatedGUILinksIncludingCoupling(ee, true);
+                    resPrimary.addAll(pairGuiLinks.getFirst());
+                    resBackup.addAll(pairGuiLinks.getSecond());
+                }
+        }
+        return Pair.of(resPrimary, resBackup);
     }
 }

@@ -7,7 +7,6 @@ import com.net2plan.interfaces.networkDesign.Link;
 import com.net2plan.interfaces.networkDesign.NetPlan;
 import com.net2plan.interfaces.networkDesign.NetworkLayer;
 import com.net2plan.interfaces.networkDesign.Node;
-import com.net2plan.utils.Pair;
 import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
 import org.apache.commons.collections15.BidiMap;
@@ -101,50 +100,214 @@ public class VisualizationMediator
         return canvasController.isVisible(link);
     }
 
-    public static void checkNpToVsConsistency(VisualizationMediator vs, NetPlan np)
+    public boolean isVisible(@NotNull final NetworkLayer layer)
     {
-        if (vs.getNetPlan() != np)
-            throw new RuntimeException("inputVs.currentNp:" + vs.getNetPlan().hashCode() + ", inputNp: " + np.hashCode());
-        for (Node n : vs.nodesToHideInCanvasAsMandatedByUserInTable)
-            if (n.getNetPlan() != np) throw new RuntimeException();
-        for (Link e : vs.linksToHideInCanvasAsMandatedByUserInTable)
-            if (e.getNetPlan() != np) throw new RuntimeException();
-        for (NetworkLayer e : vs.visualizationSnapshot.getMapCanvasLayerVisualizationOrder().keySet())
-            if (e.getNetPlan() != np) throw new RuntimeException();
-        for (NetworkLayer e : vs.visualizationSnapshot.getMapCanvasLayerVisibility().keySet())
-            if (e.getNetPlan() != np) throw new RuntimeException();
-        for (NetworkLayer e : vs.visualizationSnapshot.getMapCanvasLinkVisibility().keySet())
-            if (e.getNetPlan() != np) throw new RuntimeException();
-        for (Node e : vs.cache_canvasIntraNodeGUILinks.keySet()) if (e.getNetPlan() != np) throw new RuntimeException();
-        for (Set<GUILink> s : vs.cache_canvasIntraNodeGUILinks.values())
-            for (GUILink e : s)
-                if (e.getOriginNode().getAssociatedNode().getNetPlan() != np) throw new RuntimeException();
-        for (Set<GUILink> s : vs.cache_canvasIntraNodeGUILinks.values())
-            for (GUILink e : s)
-                if (e.getDestinationNode().getAssociatedNode().getNetPlan() != np) throw new RuntimeException();
-        for (Link e : vs.cache_canvasRegularLinkMap.keySet()) if (e.getNetPlan() != np) throw new RuntimeException();
-        for (GUILink e : vs.cache_canvasRegularLinkMap.values())
-            if (e.getAssociatedNetPlanLink().getNetPlan() != np) throw new RuntimeException();
-        for (NetworkLayer e : vs.cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.keySet())
-            if (e.getNetPlan() != np) throw new RuntimeException();
-        for (Node e : vs.cache_mapNode2IntraNodeCanvasGUILinkMap.keySet())
-            if (e.getNetPlan() != np) throw new RuntimeException();
-        for (Map<Pair<Integer, Integer>, GUILink> map : vs.cache_mapNode2IntraNodeCanvasGUILinkMap.values())
-            for (GUILink gl : map.values())
-                if (gl.getOriginNode().getAssociatedNode().getNetPlan() != np) throw new RuntimeException();
-        for (Map<Pair<Integer, Integer>, GUILink> map : vs.cache_mapNode2IntraNodeCanvasGUILinkMap.values())
-            for (GUILink gl : map.values())
-                if (gl.getDestinationNode().getAssociatedNode().getNetPlan() != np) throw new RuntimeException();
-        for (Node e : vs.cache_mapNode2ListVerticallyStackedGUINodes.keySet())
-            if (e.getNetPlan() != np) throw new RuntimeException();
-        for (List<GUINode> list : vs.cache_mapNode2ListVerticallyStackedGUINodes.values())
-            for (GUINode gn : list) if (gn.getAssociatedNode().getNetPlan() != np) throw new RuntimeException();
-        if (vs.pickedElementNotFR != null) if (vs.pickedElementNotFR.getNetPlan() != np) throw new RuntimeException();
-        if (vs.pickedElementFR != null)
-            if (vs.pickedElementFR.getFirst().getNetPlan() != np) throw new RuntimeException();
-        if (vs.pickedElementFR != null)
-            if (vs.pickedElementFR.getSecond().getNetPlan() != np) throw new RuntimeException();
+        if (layer == null) throw new NullPointerException();
+        return layerController.isLayerVisible(layer);
     }
+
+    public void show(@NotNull final Node node)
+    {
+        if (node == null) throw new NullPointerException();
+        canvasController.show(node);
+    }
+
+    public void show(@NotNull final Link link)
+    {
+        if (link == null) throw new NullPointerException();
+        canvasController.show(link);
+    }
+
+    public void hide(@NotNull final Node node)
+    {
+        if (node == null) throw new NullPointerException();
+        canvasController.hide(node);
+    }
+
+    public void hide(@NotNull final Link link)
+    {
+        if (link == null) throw new NullPointerException();
+        canvasController.hide(link);
+    }
+
+    public boolean isHidden(@NotNull final Node node)
+    {
+        if (node == null) throw new NullPointerException();
+        return canvasController.isHidden(node);
+    }
+
+    public boolean isHidden(@NotNull final Link link)
+    {
+        if (link == null) throw new NullPointerException();
+        return canvasController.isHidden(link);
+    }
+
+    public List<NetworkLayer> getLayersInOrder(final boolean considerNonVisible)
+    {
+        return layerController.getLayersInVisualizationOrder(considerNonVisible);
+    }
+
+    public Map<NetworkLayer, Integer> getLayerOrderMap(final boolean considerNonVisible)
+    {
+        return layerController.getLayerOrderMap(considerNonVisible);
+    }
+
+    public List<GUINode> getStackedGUINodes(@NotNull final Node node)
+    {
+        if (node == null) throw new NullPointerException();
+        return canvasController.getStackedGUINodes(node);
+    }
+
+    public GUINode getAssociatedGUINode(@NotNull final NetworkLayer layer, @NotNull Node node)
+    {
+        if (layer == null || node == null) throw new NullPointerException();
+        return canvasController.getAssociatedGUINode(node, layer);
+    }
+
+    public GUILink getAssociatedGUILink(@NotNull Link link)
+    {
+        if (link == null) throw new NullPointerException();
+        return canvasController.getAssociatedGUILink(link);
+    }
+
+    public GUILink getIntraNodeGUILink(@NotNull final NetworkLayer from, @NotNull Node node, @NotNull NetworkLayer to)
+    {
+        if (from == null || node == null || to == null) throw new NullPointerException();
+        return canvasController.getIntraNodeGUILink(node, from, to);
+    }
+
+    public List<GUILink> getIntraNodeGUISequence(@NotNull final NetworkLayer from, @NotNull Node node, @NotNull NetworkLayer to)
+    {
+        if (from == null || node == null || to == null) throw new NullPointerException();
+        return canvasController.getIntraNodeGUILinkSequence(node, from, to);
+    }
+
+    public Set<GUILink> getIntraNodeGUILinks(@NotNull final Node node)
+    {
+        return canvasController.getIntraNodeGUILinks(node);
+    }
+
+    public void increaseFontSize()
+    {
+        canvasController.increaseFontSizeAll();
+    }
+
+    public void increaseNodeSize()
+    {
+        canvasController.increaseNodeSizeAll();
+    }
+
+    public void increaseLinkSize()
+    {
+        canvasController.increaseLinkSizeAll();
+    }
+
+    public void decreaseFontSize()
+    {
+        canvasController.decreaseFontSizeAll();
+    }
+
+    public void decreaseNodeSize()
+    {
+        canvasController.decreaseNodeSizeAll();
+    }
+
+    public void decreaseLinkSize()
+    {
+        canvasController.decreaseLinkSizeAll();
+    }
+
+    public int getNumberOfLayers(final boolean considerNonVisible)
+    {
+        return considerNonVisible ? getNetPlan().getNumberOfLayers() : layerController.getNumberOfVisibleLayers();
+    }
+
+    boolean isInterLayerLinksShown()
+    {
+        return canvasController.isShowInterLayerLinks();
+    }
+
+    void setInterLayerLinksVisibility(boolean showInterLayerLinks)
+    {
+        canvasController.setShowInterLayerLinks(showInterLayerLinks);
+    }
+
+    boolean isNodeNamesShown()
+    {
+        return canvasController.isShowNodeNames();
+    }
+
+    void setNodeNamesVisibility(final boolean showNodeNames)
+    {
+        canvasController.setShowNodeNames(showNodeNames);
+    }
+
+    boolean isLinkLabelsShown()
+    {
+        return canvasController.isShowLinkLabels();
+    }
+
+    void setLinkLabelsVisibility(final boolean showLinkLabels)
+    {
+        canvasController.setShowLinkLabels(showLinkLabels);
+    }
+
+    boolean isNonConnectedNodesShown()
+    {
+        return canvasController.isShowNonConnectedNodes();
+    }
+
+    void setNonConnectedNodesVisibility(final boolean showNonConnectedNodes)
+    {
+        canvasController.setShowNonConnectedNodes(showNonConnectedNodes);
+    }
+
+
+
+//    public static void checkNpToVsConsistency(VisualizationMediator vs, NetPlan np)
+//    {
+//        if (vs.getNetPlan() != np)
+//            throw new RuntimeException("inputVs.currentNp:" + vs.getNetPlan().hashCode() + ", inputNp: " + np.hashCode());
+//        for (Node n : vs.nodesToHideInCanvasAsMandatedByUserInTable)
+//            if (n.getNetPlan() != np) throw new RuntimeException();
+//        for (Link e : vs.linksToHideInCanvasAsMandatedByUserInTable)
+//            if (e.getNetPlan() != np) throw new RuntimeException();
+//        for (NetworkLayer e : vs.visualizationSnapshot.getMapCanvasLayerVisualizationOrder().keySet())
+//            if (e.getNetPlan() != np) throw new RuntimeException();
+//        for (NetworkLayer e : vs.visualizationSnapshot.getMapCanvasLayerVisibility().keySet())
+//            if (e.getNetPlan() != np) throw new RuntimeException();
+//        for (NetworkLayer e : vs.visualizationSnapshot.getMapCanvasLinkVisibility().keySet())
+//            if (e.getNetPlan() != np) throw new RuntimeException();
+//        for (Node e : vs.cache_canvasIntraNodeGUILinks.keySet()) if (e.getNetPlan() != np) throw new RuntimeException();
+//        for (Set<GUILink> s : vs.cache_canvasIntraNodeGUILinks.values())
+//            for (GUILink e : s)
+//                if (e.getOriginNode().getAssociatedNode().getNetPlan() != np) throw new RuntimeException();
+//        for (Set<GUILink> s : vs.cache_canvasIntraNodeGUILinks.values())
+//            for (GUILink e : s)
+//                if (e.getDestinationNode().getAssociatedNode().getNetPlan() != np) throw new RuntimeException();
+//        for (Link e : vs.cache_canvasRegularLinkMap.keySet()) if (e.getNetPlan() != np) throw new RuntimeException();
+//        for (GUILink e : vs.cache_canvasRegularLinkMap.values())
+//            if (e.getAssociatedNetPlanLink().getNetPlan() != np) throw new RuntimeException();
+//        for (NetworkLayer e : vs.cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.keySet())
+//            if (e.getNetPlan() != np) throw new RuntimeException();
+//        for (Node e : vs.cache_mapNode2IntraNodeCanvasGUILinkMap.keySet())
+//            if (e.getNetPlan() != np) throw new RuntimeException();
+//        for (Map<Pair<Integer, Integer>, GUILink> map : vs.cache_mapNode2IntraNodeCanvasGUILinkMap.values())
+//            for (GUILink gl : map.values())
+//                if (gl.getOriginNode().getAssociatedNode().getNetPlan() != np) throw new RuntimeException();
+//        for (Map<Pair<Integer, Integer>, GUILink> map : vs.cache_mapNode2IntraNodeCanvasGUILinkMap.values())
+//            for (GUILink gl : map.values())
+//                if (gl.getDestinationNode().getAssociatedNode().getNetPlan() != np) throw new RuntimeException();
+//        for (Node e : vs.cache_mapNode2ListVerticallyStackedGUINodes.keySet())
+//            if (e.getNetPlan() != np) throw new RuntimeException();
+//        for (List<GUINode> list : vs.cache_mapNode2ListVerticallyStackedGUINodes.values())
+//            for (GUINode gn : list) if (gn.getAssociatedNode().getNetPlan() != np) throw new RuntimeException();
+//        if (vs.pickedElementNotFR != null) if (vs.pickedElementNotFR.getNetPlan() != np) throw new RuntimeException();
+//        if (vs.pickedElementFR != null)
+//            if (vs.pickedElementFR.getFirst().getNetPlan() != np) throw new RuntimeException();
+//        if (vs.pickedElementFR != null)
+//            if (vs.pickedElementFR.getSecond().getNetPlan() != np) throw new RuntimeException();
+//    }
 
     // TODO: Test
 //    private void checkCacheConsistency()
@@ -171,7 +334,7 @@ public class VisualizationMediator
 //                assertEquals(gl.getOriginNode().getAssociatedNode(), n);
 //                assertEquals(gl.getDestinationNode().getAssociatedNode(), n);
 //            }
-//            assertEquals(cache_mapNode2ListVerticallyStackedGUINodes.get(n).size(), getCanvasNumberOfVisibleLayers());
+//            assertEquals(cache_mapNode2ListVerticallyStackedGUINodes.get(n).size(), getNumberOfVisibleLayers());
 //            int indexLayer = 0;
 //            for (GUINode gn : cache_mapNode2ListVerticallyStackedGUINodes.get(n))
 //            {
