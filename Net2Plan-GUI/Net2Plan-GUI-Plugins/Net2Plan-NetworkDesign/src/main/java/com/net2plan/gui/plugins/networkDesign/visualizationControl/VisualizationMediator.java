@@ -47,15 +47,44 @@ public class VisualizationMediator
         return this.getNetPlan().isModifiable();
     }
 
-    public ITableRowFilter getTableRowFilter()
+    public boolean isInterLayerLinksShown()
     {
-        return netPlanControl.getTableRowFilter();
+        return canvasController.isShowInterLayerLinks();
     }
 
-    public void updateTableRowFilter(@NotNull ITableRowFilter tableRowFilter)
+    public void setInterLayerLinksVisibility(boolean showInterLayerLinks)
     {
-        if (tableRowFilter == null) throw new NullPointerException();
-        netPlanControl.updateTableRowFilter(tableRowFilter);
+        canvasController.setShowInterLayerLinks(showInterLayerLinks);
+    }
+
+    public boolean isNodeNamesShown()
+    {
+        return canvasController.isShowNodeNames();
+    }
+
+    public void setNodeNamesVisibility(final boolean showNodeNames)
+    {
+        canvasController.setShowNodeNames(showNodeNames);
+    }
+
+    public boolean isLinkLabelsShown()
+    {
+        return canvasController.isShowLinkLabels();
+    }
+
+    public void setLinkLabelsVisibility(final boolean showLinkLabels)
+    {
+        canvasController.setShowLinkLabels(showLinkLabels);
+    }
+
+    public boolean isNonConnectedNodesShown()
+    {
+        return canvasController.isShowNonConnectedNodes();
+    }
+
+    public void setNonConnectedNodesVisibility(final boolean showNonConnectedNodes)
+    {
+        canvasController.setShowNonConnectedNodes(showNonConnectedNodes);
     }
 
     public boolean isWhatIfAnalysisOn()
@@ -68,9 +97,15 @@ public class VisualizationMediator
         netPlanControl.setWhatIfAnalysisState(state);
     }
 
-    public int getNumberOfVisibleLayers()
+    public ITableRowFilter getTableRowFilter()
     {
-        return canvasController.getCanvasNumberOfVisibleLayers();
+        return netPlanControl.getTableRowFilter();
+    }
+
+    public void updateTableRowFilter(@NotNull ITableRowFilter tableRowFilter)
+    {
+        if (tableRowFilter == null) throw new NullPointerException();
+        netPlanControl.updateTableRowFilter(tableRowFilter);
     }
 
     public Object getPickNavigationBackElement()
@@ -140,6 +175,17 @@ public class VisualizationMediator
     {
         if (link == null) throw new NullPointerException();
         return canvasController.isHidden(link);
+    }
+
+    public int getLayerOrderPosition(@NotNull final NetworkLayer layer, final boolean considerNonVisible)
+    {
+        if (layer == null) throw new NullPointerException();
+        return layerController.getLayerOrderPosition(layer, considerNonVisible);
+    }
+
+    public NetworkLayer getLayerAtPosition(final int orderPosition, final boolean considerNonVisible)
+    {
+        return layerController.getLayerAtPosition(orderPosition, considerNonVisible);
     }
 
     public List<NetworkLayer> getLayersInOrder(final boolean considerNonVisible)
@@ -230,46 +276,6 @@ public class VisualizationMediator
     public int getNumberOfLayers(final boolean considerNonVisible)
     {
         return considerNonVisible ? getNetPlan().getNumberOfLayers() : layerController.getNumberOfVisibleLayers();
-    }
-
-    boolean isInterLayerLinksShown()
-    {
-        return canvasController.isShowInterLayerLinks();
-    }
-
-    void setInterLayerLinksVisibility(boolean showInterLayerLinks)
-    {
-        canvasController.setShowInterLayerLinks(showInterLayerLinks);
-    }
-
-    boolean isNodeNamesShown()
-    {
-        return canvasController.isShowNodeNames();
-    }
-
-    void setNodeNamesVisibility(final boolean showNodeNames)
-    {
-        canvasController.setShowNodeNames(showNodeNames);
-    }
-
-    boolean isLinkLabelsShown()
-    {
-        return canvasController.isShowLinkLabels();
-    }
-
-    void setLinkLabelsVisibility(final boolean showLinkLabels)
-    {
-        canvasController.setShowLinkLabels(showLinkLabels);
-    }
-
-    boolean isNonConnectedNodesShown()
-    {
-        return canvasController.isShowNonConnectedNodes();
-    }
-
-    void setNonConnectedNodesVisibility(final boolean showNonConnectedNodes)
-    {
-        canvasController.setShowNonConnectedNodes(showNonConnectedNodes);
     }
 
 //    public static void checkNpToVsConsistency(VisualizationMediator vs, NetPlan np)

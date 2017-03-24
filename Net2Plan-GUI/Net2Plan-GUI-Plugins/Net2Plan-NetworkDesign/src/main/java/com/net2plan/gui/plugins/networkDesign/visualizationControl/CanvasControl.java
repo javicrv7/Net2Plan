@@ -45,9 +45,6 @@ class CanvasControl
     private Map<Node, Boolean> nodeVisibilityMap;
     private Map<Link, Boolean> linkVisibilityMap;
 
-    private float linkWidthIncreaseFactorRespectToDefault;
-    private float nodeSizeIncreaseFactorRespectToDefault;
-
     /* These need is recomputed inside a rebuild */
     private Map<Node, Set<GUILink>> cache_canvasIntraNodeGUILinks;
     private Map<Link, GUILink> cache_canvasRegularLinkMap;
@@ -69,9 +66,6 @@ class CanvasControl
 
         this.nodeVisibilityMap = new HashMap<>();
         this.linkVisibilityMap = new HashMap<>();
-
-        this.linkWidthIncreaseFactorRespectToDefault = 1;
-        this.nodeSizeIncreaseFactorRespectToDefault = 1;
     }
 
     boolean isVisible(GUINode gn)
@@ -97,21 +91,21 @@ class CanvasControl
             final Node node = gl.getOriginNode().getAssociatedNode();
             final NetworkLayer originLayer = gl.getOriginNode().getLayer();
             final NetworkLayer destinationLayer = gl.getDestinationNode().getLayer();
-            final int originIndexInVisualization = getCanvasVisualizationOrderRemovingNonVisible(originLayer);
-            final int destinationIndexInVisualization = getCanvasVisualizationOrderRemovingNonVisible(destinationLayer);
+            final int originIndexInVisualization = mediator.getLayerOrderPosition(originLayer, false);
+            final int destinationIndexInVisualization = mediator.getLayerOrderPosition(destinationLayer, false);
             final int lowerVIndex = originIndexInVisualization < destinationIndexInVisualization ? originIndexInVisualization : destinationIndexInVisualization;
             final int upperVIndex = originIndexInVisualization > destinationIndexInVisualization ? originIndexInVisualization : destinationIndexInVisualization;
-            cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.get(gl.getOriginNode());
+
             boolean atLeastOneLowerLayerVisible = false;
             for (int vIndex = 0; vIndex <= lowerVIndex; vIndex++)
-                if (isVisible(getAssociatedGUINode(node, getCanvasNetworkLayerAtVisualizationOrderRemovingNonVisible(vIndex))))
+                if (isVisible(getAssociatedGUINode(node, mediator.getLayerAtPosition(vIndex, false))))
                 {
                     atLeastOneLowerLayerVisible = true;
                     break;
                 }
             if (!atLeastOneLowerLayerVisible) return false;
             boolean atLeastOneUpperLayerVisible = false;
-            for (int vIndex = upperVIndex; vIndex < getCanvasNumberOfVisibleLayers(); vIndex++)
+            for (int vIndex = upperVIndex; vIndex < mediator.getNumberOfLayers(false); vIndex++)
                 if (isVisible(getAssociatedGUINode(node, getCanvasNetworkLayerAtVisualizationOrderRemovingNonVisible(vIndex))))
                 {
                     atLeastOneUpperLayerVisible = true;
@@ -370,17 +364,6 @@ class CanvasControl
     void setShowNonConnectedNodes(boolean showNonConnectedNodes)
     {
         this.showNonConnectedNodes = showNonConnectedNodes;
-    }
-
-    private static BasicStroke resizedBasicStroke(BasicStroke a, float multFactorSize)
-    {
-        if (multFactorSize == 1) return a;
-        return new BasicStroke(a.getLineWidth() * multFactorSize, a.getEndCap(), a.getLineJoin(), a.getMiterLimit(), a.getDashArray(), a.getDashPhase());
-    }
-
-    private void setCurrentDefaultEdgeStroke(GUILink e, BasicStroke a, BasicStroke na)
-    {
-        e.setEdgeStroke(resizedBasicStroke(a, linkWidthIncreaseFactorRespectToDefault), resizedBasicStroke(na, linkWidthIncreaseFactorRespectToDefault));
     }
 
     private Pair<Set<GUILink>, Set<GUILink>> getCanvasAssociatedGUILinksIncludingCoupling(Link e, boolean regularLinkIsPrimary)
