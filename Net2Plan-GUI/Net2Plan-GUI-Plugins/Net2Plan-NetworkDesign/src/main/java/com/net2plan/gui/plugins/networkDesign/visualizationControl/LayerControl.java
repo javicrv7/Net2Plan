@@ -17,9 +17,7 @@ package com.net2plan.gui.plugins.networkDesign.visualizationControl;
 
 import com.google.common.collect.Sets;
 import com.net2plan.gui.plugins.networkDesign.topologyPane.jung.GUILink;
-import com.net2plan.gui.plugins.networkDesign.topologyPane.jung.GUINode;
-import com.net2plan.interfaces.networkDesign.NetPlan;
-import com.net2plan.interfaces.networkDesign.NetworkLayer;
+import com.net2plan.interfaces.networkDesign.*;
 import com.net2plan.utils.Pair;
 import com.net2plan.utils.Triple;
 import com.sun.istack.internal.NotNull;
@@ -28,31 +26,32 @@ import org.apache.commons.collections15.BidiMap;
 import org.apache.commons.collections15.MapUtils;
 import org.apache.commons.collections15.bidimap.DualHashBidiMap;
 
+import java.awt.*;
 import java.util.*;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
  * @author Jorge San Emeterio Villalain
  * @date 24/03/17
  */
-public class LayerController
+public class LayerControl
 {
     private final VisualizationMediator mediator;
     private final VisualizationSnapshot visualizationSnapshot;
 
     private Map<NetworkLayer, Integer> cache_mapLayerOrderNoInvisible;
 
-    LayerController(@NotNull final VisualizationMediator mediator)
+    private int interLayerSpaceInPixels;
+
+    LayerControl(@NotNull final VisualizationMediator mediator)
     {
         this.mediator = mediator;
         this.visualizationSnapshot = new VisualizationSnapshot(mediator.getNetPlan());
 
         this.cache_mapLayerOrderNoInvisible = new HashMap<>();
-    }
 
-    public NetPlan getNetPlan()
-    {
-        return visualizationSnapshot.getNetPlan();
+        this.interLayerSpaceInPixels = 50;
     }
 
     /**
@@ -142,104 +141,87 @@ public class LayerController
         return Pair.of(newLayerOrderMap, newLayerVisibilityMap);
     }
 
-    public void setCanvasLayerVisibilityAndOrder(NetPlan newCurrentNetPlan, Map<NetworkLayer, Integer> newLayerOrderMap,
-                                                 Map<NetworkLayer, Boolean> newLayerVisibilityMap)
+    public int getInterLayerSpaceInPixels()
     {
-        if (newCurrentNetPlan == null) throw new RuntimeException("Trying to update an empty topology");
+        return interLayerSpaceInPixels;
+    }
 
-        final Map<NetworkLayer, Boolean> mapCanvasLinkVisibility = this.visualizationSnapshot.getMapCanvasLinkVisibility();
+    public void setInterLayerSpaceInPixels(int interLayerSpaceInPixels)
+    {
+        this.interLayerSpaceInPixels = interLayerSpaceInPixels;
+    }
 
-        this.visualizationSnapshot.resetSnapshot(newCurrentNetPlan);
-
-        if (mediator.getNetPlan() != newCurrentNetPlan)
+    private void drawDownPropagationInterLayerLinks(Set<Link> links, Paint color)
+    {
+        for (Link link : links)
         {
-            tableRowFilter = null;
-            nodesToHideInCanvasAsMandatedByUserInTable = new HashSet<>();
-            linksToHideInCanvasAsMandatedByUserInTable = new HashSet<>();
-        }
-
-        // Updating visualization snapshot
-        if (newLayerOrderMap != null)
-        {
-            for (Map.Entry<NetworkLayer, Integer> entry : newLayerOrderMap.entrySet())
+            final GUILink gl = getCanvasAssociatedGUILink(link);
+            if (gl == null) continue;
+            if (!link.isCoupled()) continue;
+            final boolean isCoupledToDemand = link.getCoupledDemand() != null;
+            final NetworkLayer upperLayer = link.getLayer();
+            final NetworkLayer lowerLayer = isCoupledToDemand ? link.getCoupledDemand().getLayer() : link.getCoupledMulticastDemand().getLayer();
+            if (!isLayerVisibleInCanvas(lowerLayer)) continue;
+            for (GUILink interLayerLink : getCanvasIntraNodeGUILinkSequence(link.getOriginNode(), upperLayer, lowerLayer))
             {
-                visualizationSnapshot.setLayerVisualizationOrder(entry.getKey(), entry.getValue());
+                setCurrentDefaultEdgeStroke(interLayerLink, VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE_PICKED, VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE_PICKED);
+                interLayerLink.setEdgeDrawPaint(color);
+                interLayerLink.setShownSeparated(false);
+                interLayerLink.setHasArrow(true);
+            }
+            for (GUILink interLayerLink : getCanvasIntraNodeGUILinkSequence(link.getDestinationNode(), lowerLayer, upperLayer))
+            {
+                setCurrentDefaultEdgeStroke(interLayerLink, VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE_PICKED, VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE_PICKED);
+                interLayerLink.setEdgeDrawPaint(color);
+                interLayerLink.setShownSeparated(false);
+                interLayerLink.setHasArrow(true);
             }
         }
+    }
 
-        if (newLayerVisibilityMap != null)
+    private void drawColateralLinks(Collection<Link> links, Paint colorIfNotFailedLink)
+    {
+        for (Link link : links)
         {
-            for (Map.Entry<NetworkLayer, Boolean> entry : newLayerVisibilityMap.entrySet())
+            final GUILink glColateral = getCanvasAssociatedGUILink(link);
+            if (glColateral == null) continue;
+            setCurrentDefaultEdgeStroke(glColateral, VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE_PICKED_COLATERALACTVELAYER, VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE_PICKED_COLATERALNONACTIVELAYER);
+            final Paint color = link.isDown() ? VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_FAILED : colorIfNotFailedLink;
+            glColateral.setEdgeDrawPaint(color);
+            glColateral.setShownSeparated(true);
+            glColateral.setHasArrow(true);
+        }
+    }
+
+    private Pair<Set<Demand>, Set<Pair<MulticastDemand, Node>>> getDownCoupling(Collection<Link> links)
+    {
+        final Set<Demand> res_1 = new HashSet<>();
+        final Set<Pair<MulticastDemand, Node>> res_2 = new HashSet<>();
+        for (Link link : links)
+        {
+            if (link.getCoupledDemand() != null) res_1.add(link.getCoupledDemand());
+            else if (link.getCoupledMulticastDemand() != null)
+                res_2.add(Pair.of(link.getCoupledMulticastDemand(), link.getDestinationNode()));
+        }
+        return Pair.of(res_1, res_2);
+
+    }
+
+    private Set<Link> getUpCoupling(Collection<Demand> demands, Collection<Pair<MulticastDemand, Node>> mDemands)
+    {
+        final Set<Link> res = new HashSet<>();
+        if (demands != null)
+            for (Demand d : demands)
+                if (d.isCoupled()) res.add(d.getCoupledLink());
+        if (mDemands != null)
+            for (Pair<MulticastDemand, Node> md : mDemands)
             {
-                visualizationSnapshot.addLayerVisibility(entry.getKey(), entry.getValue());
+                if (md.getFirst().isCoupled())
+                    res.add(md.getFirst().getCoupledLinks().stream().filter(e -> e.getDestinationNode() == md.getSecond()).findFirst().get());
+//    			System.out.println(md.getFirst().getCoupledLinks().stream().map(e->e.getDestinationNode()).collect(Collectors.toList()));
+//    			System.out.println(md.getSecond());
             }
-        }
-
-        for (Map.Entry<NetworkLayer, Boolean> entry : mapCanvasLinkVisibility.entrySet())
-        {
-            if (!mediator.getNetPlan().getNetworkLayers().contains(entry.getKey())) continue;
-            visualizationSnapshot.addLinkVisibility(entry.getKey(), entry.getValue());
-        }
-
-        /* implicitly we restart the picking state */
-        elementSelector.resetPickedState();
-
-        this.cache_canvasIntraNodeGUILinks = new HashMap<>();
-        this.cache_canvasRegularLinkMap = new HashMap<>();
-        this.cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible = new DualHashBidiMap<>();
-        this.cache_mapNode2IntraNodeCanvasGUILinkMap = new HashMap<>();
-        this.cache_mapNode2ListVerticallyStackedGUINodes = new HashMap<>();
-        for (int layerVisualizationOrderIncludingNonVisible = 0; layerVisualizationOrderIncludingNonVisible < mediator.getNetPlan().getNumberOfLayers(); layerVisualizationOrderIncludingNonVisible++)
-        {
-            final NetworkLayer layer = MapUtils.invertMap(visualizationSnapshot.getMapCanvasLayerVisualizationOrder()).get(layerVisualizationOrderIncludingNonVisible);
-            if (isLayerVisible(layer))
-                cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.put(layer, cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.size());
-        }
-        for (Node n : mediator.getNetPlan().getNodes())
-        {
-            List<GUINode> guiNodesThisNode = new ArrayList<>();
-            cache_mapNode2ListVerticallyStackedGUINodes.put(n, guiNodesThisNode);
-            Set<GUILink> intraNodeGUILinksThisNode = new HashSet<>();
-            cache_canvasIntraNodeGUILinks.put(n, intraNodeGUILinksThisNode);
-            Map<Pair<Integer, Integer>, GUILink> thisNodeInterLayerLinksInfoMap = new HashMap<>();
-            cache_mapNode2IntraNodeCanvasGUILinkMap.put(n, thisNodeInterLayerLinksInfoMap);
-            for (int trueVisualizationOrderIndex = 0; trueVisualizationOrderIndex < cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.size(); trueVisualizationOrderIndex++)
-            {
-                final NetworkLayer newLayer = cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.inverseBidiMap().get(trueVisualizationOrderIndex);
-                final double iconHeightIfNotActive = nodeSizeIncreaseFactorRespectToDefault * (getNetPlan().getNumberOfNodes() > 100 ? VisualizationConstants.DEFAULT_GUINODE_SHAPESIZE_MORETHAN100NODES : VisualizationConstants.DEFAULT_GUINODE_SHAPESIZE);
-                final GUINode gn = new GUINode(n, newLayer, iconHeightIfNotActive);
-                guiNodesThisNode.add(gn);
-                if (trueVisualizationOrderIndex > 0)
-                {
-                    final GUINode lowerLayerGNode = guiNodesThisNode.get(trueVisualizationOrderIndex - 1);
-                    final GUINode upperLayerGNode = guiNodesThisNode.get(trueVisualizationOrderIndex);
-                    if (upperLayerGNode != gn) throw new RuntimeException();
-                    final GUILink glLowerToUpper = new GUILink(null, lowerLayerGNode, gn,
-                            resizedBasicStroke(VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE, linkWidthIncreaseFactorRespectToDefault),
-                            resizedBasicStroke(VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE, linkWidthIncreaseFactorRespectToDefault));
-                    final GUILink glUpperToLower = new GUILink(null, gn, lowerLayerGNode,
-                            resizedBasicStroke(VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE, linkWidthIncreaseFactorRespectToDefault),
-                            resizedBasicStroke(VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE, linkWidthIncreaseFactorRespectToDefault));
-                    intraNodeGUILinksThisNode.add(glLowerToUpper);
-                    intraNodeGUILinksThisNode.add(glUpperToLower);
-                    thisNodeInterLayerLinksInfoMap.put(Pair.of(trueVisualizationOrderIndex - 1, trueVisualizationOrderIndex), glLowerToUpper);
-                    thisNodeInterLayerLinksInfoMap.put(Pair.of(trueVisualizationOrderIndex, trueVisualizationOrderIndex - 1), glUpperToLower);
-                }
-            }
-        }
-        for (int trueVisualizationOrderIndex = 0; trueVisualizationOrderIndex < cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.size(); trueVisualizationOrderIndex++)
-        {
-            final NetworkLayer layer = cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.inverseBidiMap().get(trueVisualizationOrderIndex);
-            for (Link e : mediator.getNetPlan().getLinks(layer))
-            {
-                final GUINode gn1 = cache_mapNode2ListVerticallyStackedGUINodes.get(e.getOriginNode()).get(trueVisualizationOrderIndex);
-                final GUINode gn2 = cache_mapNode2ListVerticallyStackedGUINodes.get(e.getDestinationNode()).get(trueVisualizationOrderIndex);
-                final GUILink gl1 = new GUILink(e, gn1, gn2,
-                        resizedBasicStroke(VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE_ACTIVELAYER, linkWidthIncreaseFactorRespectToDefault),
-                        resizedBasicStroke(VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE, linkWidthIncreaseFactorRespectToDefault));
-                cache_canvasRegularLinkMap.put(e, gl1);
-            }
-        }
+        return res;
     }
 
     class VisualizationSnapshot
@@ -333,11 +315,11 @@ public class LayerController
             aux_layerToGUI.get(layer).setLinksVisibility(visibility);
         }
 
-        public com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationSnapshot copy()
+        public VisualizationSnapshot copy()
         {
             final NetPlan npCopy = netPlan.copy();
 
-            final com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationSnapshot snapshotCopy = new com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationSnapshot(npCopy);
+            final VisualizationSnapshot snapshotCopy = new VisualizationSnapshot(npCopy);
 
             // Copy layer order
             for (Map.Entry<NetworkLayer, Integer> entry : getMapCanvasLayerVisualizationOrder().entrySet())

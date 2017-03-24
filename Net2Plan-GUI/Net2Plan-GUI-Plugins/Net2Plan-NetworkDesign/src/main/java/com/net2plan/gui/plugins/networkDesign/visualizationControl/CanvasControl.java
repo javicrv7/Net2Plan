@@ -24,13 +24,15 @@ import org.apache.commons.collections15.BidiMap;
 import org.apache.commons.collections15.MapUtils;
 import org.apache.commons.collections15.bidimap.DualHashBidiMap;
 
+import java.awt.*;
 import java.util.*;
+import java.util.List;
 
 /**
  * @author Jorge San Emeterio Villalain
  * @date 24/03/17
  */
-class CanvasController
+class CanvasControl
 {
     private VisualizationMediator mediator;
 
@@ -45,7 +47,17 @@ class CanvasController
 
     private Map<Node, Boolean> nodeVisibilityMap;
 
-    CanvasController(@NotNull final VisualizationMediator mediator)
+    private float linkWidthIncreaseFactorRespectToDefault;
+    private float nodeSizeIncreaseFactorRespectToDefault;
+
+    /* These need is recomputed inside a rebuild */
+    private Map<Node, Set<GUILink>> cache_canvasIntraNodeGUILinks;
+    private Map<Link, GUILink> cache_canvasRegularLinkMap;
+    private BidiMap<NetworkLayer, Integer> cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible; // as many elements as visible layers
+    private Map<Node, Map<Pair<Integer, Integer>, GUILink>> cache_mapNode2IntraNodeCanvasGUILinkMap; // integers are orders of REAL VISIBLE LAYERS
+    private Map<Node, List<GUINode>> cache_mapNode2ListVerticallyStackedGUINodes;
+
+    CanvasControl(@NotNull final VisualizationMediator mediator)
     {
         this.mediator = mediator;
 
@@ -59,6 +71,9 @@ class CanvasController
         this.showLayerPropagation = true;
 
         this.nodeVisibilityMap = new HashMap<>();
+
+        this.linkWidthIncreaseFactorRespectToDefault = 1;
+        this.nodeSizeIncreaseFactorRespectToDefault = 1;
     }
 
     boolean isVisibleInCanvas(GUINode gn)
@@ -547,5 +562,16 @@ class CanvasController
     void setShowNonConnectedNodes(boolean showNonConnectedNodes)
     {
         this.showNonConnectedNodes = showNonConnectedNodes;
+    }
+
+    private static BasicStroke resizedBasicStroke(BasicStroke a, float multFactorSize)
+    {
+        if (multFactorSize == 1) return a;
+        return new BasicStroke(a.getLineWidth() * multFactorSize, a.getEndCap(), a.getLineJoin(), a.getMiterLimit(), a.getDashArray(), a.getDashPhase());
+    }
+
+    private void setCurrentDefaultEdgeStroke(GUILink e, BasicStroke a, BasicStroke na)
+    {
+        e.setEdgeStroke(resizedBasicStroke(a, linkWidthIncreaseFactorRespectToDefault), resizedBasicStroke(na, linkWidthIncreaseFactorRespectToDefault));
     }
 }
