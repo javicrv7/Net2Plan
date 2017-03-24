@@ -20,7 +20,6 @@ import com.net2plan.gui.plugins.networkDesign.topologyPane.jung.GUINode;
 import com.net2plan.interfaces.networkDesign.*;
 import com.net2plan.utils.Pair;
 import com.sun.istack.internal.NotNull;
-import org.apache.commons.collections15.BidiMap;
 
 import java.awt.*;
 import java.util.*;
@@ -217,28 +216,28 @@ class CanvasControl
     boolean decreaseFontSizeAll()
     {
         boolean changedSize = false;
-        for (GUINode gn : getCanvasAllGUINodes())
+        for (GUINode gn : getAllGUINodes())
             changedSize |= gn.decreaseFontSize();
         return changedSize;
     }
 
     void increaseFontSizeAll()
     {
-        for (GUINode gn : getCanvasAllGUINodes())
+        for (GUINode gn : getAllGUINodes())
             gn.increaseFontSize();
     }
 
     void decreaseNodeSizeAll()
     {
         nodeSizeIncreaseFactorRespectToDefault *= VisualizationConstants.SCALE_OUT;
-        for (GUINode gn : getCanvasAllGUINodes())
+        for (GUINode gn : getAllGUINodes())
             gn.setIconHeightInNonActiveLayer(gn.getIconHeightInNotActiveLayer() * VisualizationConstants.SCALE_OUT);
     }
 
     void increaseNodeSizeAll()
     {
         nodeSizeIncreaseFactorRespectToDefault *= VisualizationConstants.SCALE_IN;
-        for (GUINode gn : getCanvasAllGUINodes())
+        for (GUINode gn : getAllGUINodes())
             gn.setIconHeightInNonActiveLayer(gn.getIconHeightInNotActiveLayer() * VisualizationConstants.SCALE_IN);
     }
 
@@ -246,7 +245,7 @@ class CanvasControl
     {
         final float multFactor = VisualizationConstants.SCALE_OUT;
         linkWidthIncreaseFactorRespectToDefault *= multFactor;
-        for (GUILink e : getCanvasAllGUILinks(true, true))
+        for (GUILink e : getAllGUILinks(true, true))
             e.setEdgeStroke(resizedBasicStroke(e.getStrokeIfActiveLayer(), multFactor), resizedBasicStroke(e.getStrokeIfNotActiveLayer(), multFactor));
     }
 
@@ -254,53 +253,46 @@ class CanvasControl
     {
         final float multFactor = VisualizationConstants.SCALE_IN;
         linkWidthIncreaseFactorRespectToDefault *= multFactor;
-        for (GUILink e : getCanvasAllGUILinks(true, true))
+        for (GUILink e : getAllGUILinks(true, true))
             e.setEdgeStroke(resizedBasicStroke(e.getStrokeIfActiveLayer(), multFactor), resizedBasicStroke(e.getStrokeIfNotActiveLayer(), multFactor));
     }
 
-    Set<GUILink> getCanvasAllGUILinks(boolean includeRegularLinks, boolean includeInterLayerLinks)
+    Set<GUILink> getAllGUILinks(boolean includeRegularLinks, boolean includeInterLayerLinks)
     {
         Set<GUILink> res = new HashSet<>();
         if (includeRegularLinks) res.addAll(cache_canvasRegularLinkMap.values());
         if (includeInterLayerLinks)
-            for (Node n : this.getNetPlan().getNodes())
+            for (Node n : mediator.getNetPlan().getNodes())
                 res.addAll(this.cache_canvasIntraNodeGUILinks.get(n));
         return res;
     }
 
-    Set<GUINode> getCanvasAllGUINodes()
+    Set<GUINode> getAllGUINodes()
     {
         Set<GUINode> res = new HashSet<>();
         for (List<GUINode> list : this.cache_mapNode2ListVerticallyStackedGUINodes.values()) res.addAll(list);
         return res;
     }
 
-    double getCanvasDefaultVerticalDistanceForInterLayers()
+    boolean isShowLowerLayerPropagation()
     {
-        if (this.getNetPlan().getNumberOfNodes() == 0) return 1.0;
-        final int numVisibleLayers = getCanvasNumberOfVisibleLayers() == 0 ? this.getNetPlan().getNumberOfLayers() : getCanvasNumberOfVisibleLayers();
-        double minY = Double.MAX_VALUE;
-        double maxY = -Double.MAX_VALUE;
-        for (Node n : this.getNetPlan().getNodes())
-        {
-            final double y = n.getXYPositionMap().getY();
-            minY = Math.min(minY, y);
-            maxY = Math.max(maxY, y);
-        }
-        if ((maxY - minY < 1e-6)) return Math.abs(maxY) / (30 * numVisibleLayers);
-        return (maxY - minY) / (30 * numVisibleLayers);
+        return showLowerLayerPropagation;
     }
 
-    boolean isShowInCanvasLowerLayerPropagation()
+    boolean isShowUpperLayerPropagation()
     {
-        return showInCanvasLowerLayerPropagation;
+        return showUpperLayerPropagation;
     }
 
-
-    void setShowInCanvasLowerLayerPropagation(boolean showLowerLayerPropagation)
+    boolean isShowThisLayerPropagation()
     {
-        if (showLowerLayerPropagation == this.showInCanvasLowerLayerPropagation) return;
-        this.showInCanvasLowerLayerPropagation = showLowerLayerPropagation;
+        return showLayerPropagation;
+    }
+
+    void setShowLowerLayerPropagation(boolean showLowerLayerPropagation)
+    {
+        if (showLowerLayerPropagation == this.showLowerLayerPropagation) return;
+        this.showLowerLayerPropagation = showLowerLayerPropagation;
         if (pickedElementType != null)
             if (pickedElementNotFR != null)
                 this.pickElement(pickedElementNotFR);
@@ -308,22 +300,10 @@ class CanvasControl
                 this.pickForwardingRule(pickedElementFR);
     }
 
-
-    boolean isShowInCanvasUpperLayerPropagation()
+    void setShowUpperLayerPropagation(boolean showUpperLayerPropagation)
     {
-        return showInCanvasUpperLayerPropagation;
-    }
-
-    boolean isShowInCanvasThisLayerPropagation()
-    {
-        return showInCanvasThisLayerPropagation;
-    }
-
-
-    void setShowInCanvasUpperLayerPropagation(boolean showUpperLayerPropagation)
-    {
-        if (showUpperLayerPropagation == this.showInCanvasUpperLayerPropagation) return;
-        this.showInCanvasUpperLayerPropagation = showUpperLayerPropagation;
+        if (showUpperLayerPropagation == this.showUpperLayerPropagation) return;
+        this.showUpperLayerPropagation = showUpperLayerPropagation;
         if (pickedElementType != null)
             if (pickedElementNotFR != null)
                 this.pickElement(pickedElementNotFR);
@@ -333,18 +313,13 @@ class CanvasControl
 
     void setShowInCanvasThisLayerPropagation(boolean showThisLayerPropagation)
     {
-        if (showThisLayerPropagation == this.showInCanvasThisLayerPropagation) return;
-        this.showInCanvasThisLayerPropagation = showThisLayerPropagation;
+        if (showThisLayerPropagation == this.showLayerPropagation) return;
+        this.showLayerPropagation = showThisLayerPropagation;
         if (pickedElementType != null)
             if (pickedElementNotFR != null)
                 this.pickElement(pickedElementNotFR);
             else
                 this.pickForwardingRule(pickedElementFR);
-    }
-
-    Map<NetworkLayer, Boolean> getCanvasLayerVisibilityMap()
-    {
-        return Collections.unmodifiableMap(this.visualizationSnapshot.getMapCanvasLayerVisibility());
     }
 
     boolean isShowNodeNames()
@@ -385,36 +360,6 @@ class CanvasControl
     void setShowInterLayerLinks(boolean showInterLayerLinks)
     {
         this.showInterLayerLinks = showInterLayerLinks;
-    }
-
-    boolean isShowLowerLayerPropagation()
-    {
-        return showLowerLayerPropagation;
-    }
-
-    void setShowLowerLayerPropagation(boolean showLowerLayerPropagation)
-    {
-        this.showLowerLayerPropagation = showLowerLayerPropagation;
-    }
-
-    boolean isShowUpperLayerPropagation()
-    {
-        return showUpperLayerPropagation;
-    }
-
-    void setShowUpperLayerPropagation(boolean showUpperLayerPropagation)
-    {
-        this.showUpperLayerPropagation = showUpperLayerPropagation;
-    }
-
-    boolean isShowLayerPropagation()
-    {
-        return showLayerPropagation;
-    }
-
-    void setShowLayerPropagation(boolean showLayerPropagation)
-    {
-        this.showLayerPropagation = showLayerPropagation;
     }
 
     boolean isShowNonConnectedNodes()

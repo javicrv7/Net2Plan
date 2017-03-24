@@ -152,6 +152,16 @@ public class VisualizationMediator
         return layerController.getLayerOrderMap(considerNonVisible);
     }
 
+    public Set<GUINode> getAllGUINodes()
+    {
+        return canvasController.getAllGUINodes();
+    }
+
+    public Set<GUILink> getAllGUILinks()
+    {
+        return canvasController.getAllGUILinks(true, true);
+    }
+
     public List<GUINode> getStackedGUINodes(@NotNull final Node node)
     {
         if (node == null) throw new NullPointerException();
@@ -261,8 +271,6 @@ public class VisualizationMediator
     {
         canvasController.setShowNonConnectedNodes(showNonConnectedNodes);
     }
-
-
 
 //    public static void checkNpToVsConsistency(VisualizationMediator vs, NetPlan np)
 //    {
