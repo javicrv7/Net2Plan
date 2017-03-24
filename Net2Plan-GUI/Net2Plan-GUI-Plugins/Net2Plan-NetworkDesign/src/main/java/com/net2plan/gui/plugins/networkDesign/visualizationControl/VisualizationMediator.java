@@ -28,12 +28,9 @@ public class VisualizationMediator
 {
     private static Map<Triple<URL, Integer, Color>, Pair<ImageIcon, Shape>> databaseOfAlreadyReadIcons = new HashMap<>(); // for each url, height, and border color, an image
 
-    private PickTimeLineManager pickTimeLineManager;
-    private CanvasController canvasController;
-
-    private NetworkElementType pickedElementType;
-    private NetworkElement pickedElementNotFR;
-    private Pair<Demand, Link> pickedElementFR;
+    private final PickTimeLineManager pickTimeLineManager;
+    private final CanvasController canvasController;
+    private final ElementSelector elementSelector;
 
     private boolean whatIfAnalysisActive;
 
@@ -62,15 +59,15 @@ public class VisualizationMediator
     public VisualizationMediator(NetPlan currentNp, BidiMap<NetworkLayer, Integer> mapLayer2VisualizationOrder, Map<NetworkLayer, Boolean> layerVisibilityMap, int maxSizePickUndoList)
     {
         this.visualizationSnapshot = new VisualizationSnapshot(currentNp);
-        this.canvasController = new CanvasController();
+
+        this.canvasController = new CanvasController(this);
+        this.elementSelector = new ElementSelector(this);
+        this.pickTimeLineManager = new PickTimeLineManager();
 
         this.nodesToHideInCanvasAsMandatedByUserInTable = new HashSet<>();
         this.linksToHideInCanvasAsMandatedByUserInTable = new HashSet<>();
         this.interLayerSpaceInPixels = 50;
         this.tableRowFilter = null;
-        this.pickTimeLineManager = new PickTimeLineManager();
-        this.pickedElementNotFR = null;
-        this.pickedElementFR = null;
         this.linkWidthIncreaseFactorRespectToDefault = 1;
         this.nodeSizeIncreaseFactorRespectToDefault = 1;
 
@@ -132,133 +129,6 @@ public class VisualizationMediator
         return this.getNetPlan().isModifiable();
     }
 
-    public List<GUINode> getCanvasVerticallyStackedGUINodes(Node n)
-    {
-        return cache_mapNode2ListVerticallyStackedGUINodes.get(n);
-    }
-
-    public GUINode getCanvasAssociatedGUINode(Node n, NetworkLayer layer)
-    {
-        final Integer trueVisualizationIndex = cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.get(layer);
-        if (trueVisualizationIndex == null) return null;
-        return getCanvasVerticallyStackedGUINodes(n).get(trueVisualizationIndex);
-    }
-
-    public GUILink getCanvasAssociatedGUILink(Link e)
-    {
-        return cache_canvasRegularLinkMap.get(e);
-    }
-
-    public Pair<Set<GUILink>, Set<GUILink>> getCanvasAssociatedGUILinksIncludingCoupling(Link e, boolean regularLinkIsPrimary)
-    {
-        Set<GUILink> resPrimary = new HashSet<>();
-        Set<GUILink> resBackup = new HashSet<>();
-        if (regularLinkIsPrimary) resPrimary.add(getCanvasAssociatedGUILink(e));
-        else resBackup.add(getCanvasAssociatedGUILink(e));
-        if (!e.isCoupled()) return Pair.of(resPrimary, resBackup);
-        if (e.getCoupledDemand() != null)
-        {
-            /* add the intranode links */
-            final NetworkLayer upperLayer = e.getLayer();
-            final NetworkLayer downLayer = e.getCoupledDemand().getLayer();
-            if (regularLinkIsPrimary)
-            {
-                resPrimary.addAll(getCanvasIntraNodeGUILinkSequence(e.getOriginNode(), upperLayer, downLayer));
-                resPrimary.addAll(getCanvasIntraNodeGUILinkSequence(e.getDestinationNode(), downLayer, upperLayer));
-            } else
-            {
-                resBackup.addAll(getCanvasIntraNodeGUILinkSequence(e.getOriginNode(), upperLayer, downLayer));
-                resBackup.addAll(getCanvasIntraNodeGUILinkSequence(e.getDestinationNode(), downLayer, upperLayer));
-            }
-
-			/* add the regular links */
-            Pair<Set<Link>, Set<Link>> traversedLinks = e.getCoupledDemand().getLinksThisLayerPotentiallyCarryingTraffic(true);
-            for (Link ee : traversedLinks.getFirst())
-            {
-                Pair<Set<GUILink>, Set<GUILink>> pairGuiLinks = getCanvasAssociatedGUILinksIncludingCoupling(ee, true);
-                if (regularLinkIsPrimary) resPrimary.addAll(pairGuiLinks.getFirst());
-                else resBackup.addAll(pairGuiLinks.getFirst());
-                resBackup.addAll(pairGuiLinks.getSecond());
-            }
-            for (Link ee : traversedLinks.getSecond())
-            {
-                Pair<Set<GUILink>, Set<GUILink>> pairGuiLinks = getCanvasAssociatedGUILinksIncludingCoupling(ee, false);
-                resPrimary.addAll(pairGuiLinks.getFirst());
-                resBackup.addAll(pairGuiLinks.getSecond());
-            }
-        } else if (e.getCoupledMulticastDemand() != null)
-        {
-            /* add the intranode links */
-            final NetworkLayer upperLayer = e.getLayer();
-            final MulticastDemand lowerLayerDemand = e.getCoupledMulticastDemand();
-            final NetworkLayer downLayer = lowerLayerDemand.getLayer();
-            if (regularLinkIsPrimary)
-            {
-                resPrimary.addAll(getCanvasIntraNodeGUILinkSequence(lowerLayerDemand.getIngressNode(), upperLayer, downLayer));
-                resPrimary.addAll(getCanvasIntraNodeGUILinkSequence(lowerLayerDemand.getIngressNode(), downLayer, upperLayer));
-                for (Node n : lowerLayerDemand.getEgressNodes())
-                {
-                    resPrimary.addAll(getCanvasIntraNodeGUILinkSequence(n, upperLayer, downLayer));
-                    resPrimary.addAll(getCanvasIntraNodeGUILinkSequence(n, downLayer, upperLayer));
-                }
-            } else
-            {
-                resBackup.addAll(getCanvasIntraNodeGUILinkSequence(lowerLayerDemand.getIngressNode(), upperLayer, downLayer));
-                resBackup.addAll(getCanvasIntraNodeGUILinkSequence(lowerLayerDemand.getIngressNode(), downLayer, upperLayer));
-                for (Node n : lowerLayerDemand.getEgressNodes())
-                {
-                    resBackup.addAll(getCanvasIntraNodeGUILinkSequence(n, upperLayer, downLayer));
-                    resBackup.addAll(getCanvasIntraNodeGUILinkSequence(n, downLayer, upperLayer));
-                }
-            }
-
-            for (MulticastTree t : lowerLayerDemand.getMulticastTrees())
-                for (Link ee : t.getLinkSet())
-                {
-                    Pair<Set<GUILink>, Set<GUILink>> pairGuiLinks = getCanvasAssociatedGUILinksIncludingCoupling(ee, true);
-                    resPrimary.addAll(pairGuiLinks.getFirst());
-                    resBackup.addAll(pairGuiLinks.getSecond());
-                }
-        }
-        return Pair.of(resPrimary, resBackup);
-    }
-
-    public GUILink getCanvasIntraNodeGUILink(Node n, NetworkLayer from, NetworkLayer to)
-    {
-        final Integer fromRealVIndex = cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.get(from);
-        final Integer toRealVIndex = cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.get(to);
-        if ((fromRealVIndex == null) || (toRealVIndex == null)) return null;
-        return cache_mapNode2IntraNodeCanvasGUILinkMap.get(n).get(Pair.of(fromRealVIndex, toRealVIndex));
-    }
-
-    public Set<GUILink> getCanvasIntraNodeGUILinks(Node n)
-    {
-        return cache_canvasIntraNodeGUILinks.get(n);
-    }
-
-    public List<GUILink> getCanvasIntraNodeGUILinkSequence(Node n, NetworkLayer from, NetworkLayer to)
-    {
-        if (from.getNetPlan() != this.getNetPlan()) throw new RuntimeException("Bad");
-        if (to.getNetPlan() != this.getNetPlan()) throw new RuntimeException("Bad");
-        final Integer fromRealVIndex = cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.get(from);
-        final Integer toRealVIndex = cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.get(to);
-
-        final List<GUILink> res = new LinkedList<>();
-        if ((fromRealVIndex == null) || (toRealVIndex == null)) return res;
-        if (fromRealVIndex == toRealVIndex) return res;
-        final int increment = toRealVIndex > fromRealVIndex ? 1 : -1;
-        int vLayerIndex = fromRealVIndex;
-        do
-        {
-            final int origin = vLayerIndex;
-            final int destination = vLayerIndex + increment;
-            res.add(cache_mapNode2IntraNodeCanvasGUILinkMap.get(n).get(Pair.of(origin, destination)));
-            vLayerIndex += increment;
-        } while (vLayerIndex != toRealVIndex);
-
-        return res;
-    }
-
     VisualizationSnapshot getSnapshot()
     {
         return visualizationSnapshot;
@@ -311,9 +181,7 @@ public class VisualizationMediator
         }
 
         /* implicitly we restart the picking state */
-        this.pickedElementType = null;
-        this.pickedElementNotFR = null;
-        this.pickedElementFR = null;
+        elementSelector.resetPickedState();
 
         this.cache_canvasIntraNodeGUILinks = new HashMap<>();
         this.cache_canvasRegularLinkMap = new HashMap<>();
@@ -337,20 +205,20 @@ public class VisualizationMediator
             for (int trueVisualizationOrderIndex = 0; trueVisualizationOrderIndex < cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.size(); trueVisualizationOrderIndex++)
             {
                 final NetworkLayer newLayer = cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.inverseBidiMap().get(trueVisualizationOrderIndex);
-                final double iconHeightIfNotActive = nodeSizeIncreaseFactorRespectToDefault * (getNetPlan().getNumberOfNodes() > 100? VisualizationConstants.DEFAULT_GUINODE_SHAPESIZE_MORETHAN100NODES : VisualizationConstants.DEFAULT_GUINODE_SHAPESIZE);
-                final GUINode gn = new GUINode(n, newLayer , iconHeightIfNotActive);
+                final double iconHeightIfNotActive = nodeSizeIncreaseFactorRespectToDefault * (getNetPlan().getNumberOfNodes() > 100 ? VisualizationConstants.DEFAULT_GUINODE_SHAPESIZE_MORETHAN100NODES : VisualizationConstants.DEFAULT_GUINODE_SHAPESIZE);
+                final GUINode gn = new GUINode(n, newLayer, iconHeightIfNotActive);
                 guiNodesThisNode.add(gn);
                 if (trueVisualizationOrderIndex > 0)
                 {
                     final GUINode lowerLayerGNode = guiNodesThisNode.get(trueVisualizationOrderIndex - 1);
                     final GUINode upperLayerGNode = guiNodesThisNode.get(trueVisualizationOrderIndex);
                     if (upperLayerGNode != gn) throw new RuntimeException();
-                    final GUILink glLowerToUpper = new GUILink(null, lowerLayerGNode, gn ,
-                    		resizedBasicStroke(VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE, linkWidthIncreaseFactorRespectToDefault) ,
-                    		resizedBasicStroke(VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE, linkWidthIncreaseFactorRespectToDefault));
-                    final GUILink glUpperToLower = new GUILink(null, gn, lowerLayerGNode ,
-                    		resizedBasicStroke(VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE, linkWidthIncreaseFactorRespectToDefault) ,
-                    		resizedBasicStroke(VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE, linkWidthIncreaseFactorRespectToDefault));
+                    final GUILink glLowerToUpper = new GUILink(null, lowerLayerGNode, gn,
+                            resizedBasicStroke(VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE, linkWidthIncreaseFactorRespectToDefault),
+                            resizedBasicStroke(VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE, linkWidthIncreaseFactorRespectToDefault));
+                    final GUILink glUpperToLower = new GUILink(null, gn, lowerLayerGNode,
+                            resizedBasicStroke(VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE, linkWidthIncreaseFactorRespectToDefault),
+                            resizedBasicStroke(VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE, linkWidthIncreaseFactorRespectToDefault));
                     intraNodeGUILinksThisNode.add(glLowerToUpper);
                     intraNodeGUILinksThisNode.add(glUpperToLower);
                     thisNodeInterLayerLinksInfoMap.put(Pair.of(trueVisualizationOrderIndex - 1, trueVisualizationOrderIndex), glLowerToUpper);
@@ -365,9 +233,9 @@ public class VisualizationMediator
             {
                 final GUINode gn1 = cache_mapNode2ListVerticallyStackedGUINodes.get(e.getOriginNode()).get(trueVisualizationOrderIndex);
                 final GUINode gn2 = cache_mapNode2ListVerticallyStackedGUINodes.get(e.getDestinationNode()).get(trueVisualizationOrderIndex);
-                final GUILink gl1 = new GUILink(e, gn1, gn2 ,
-                	resizedBasicStroke(VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE_ACTIVELAYER, linkWidthIncreaseFactorRespectToDefault) ,
-        			resizedBasicStroke(VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE, linkWidthIncreaseFactorRespectToDefault));
+                final GUILink gl1 = new GUILink(e, gn1, gn2,
+                        resizedBasicStroke(VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE_ACTIVELAYER, linkWidthIncreaseFactorRespectToDefault),
+                        resizedBasicStroke(VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE, linkWidthIncreaseFactorRespectToDefault));
                 cache_canvasRegularLinkMap.put(e, gl1);
             }
         }
@@ -408,121 +276,6 @@ public class VisualizationMediator
 //            }
 //        }
 //    }
-
-    public boolean decreaseCanvasFontSizeAll()
-    {
-        boolean changedSize = false;
-        for (GUINode gn : getCanvasAllGUINodes())
-            changedSize |= gn.decreaseFontSize();
-        return changedSize;
-    }
-
-    public void increaseCanvasFontSizeAll()
-    {
-        for (GUINode gn : getCanvasAllGUINodes())
-            gn.increaseFontSize();
-    }
-
-    public void decreaseCanvasNodeSizeAll()
-    {
-    	nodeSizeIncreaseFactorRespectToDefault *= VisualizationConstants.SCALE_OUT;
-        for (GUINode gn : getCanvasAllGUINodes())
-            gn.setIconHeightInNonActiveLayer(gn.getIconHeightInNotActiveLayer() * VisualizationConstants.SCALE_OUT);
-    }
-
-    public void increaseCanvasNodeSizeAll()
-    {
-    	nodeSizeIncreaseFactorRespectToDefault *= VisualizationConstants.SCALE_IN;
-        for (GUINode gn : getCanvasAllGUINodes())
-            gn.setIconHeightInNonActiveLayer(gn.getIconHeightInNotActiveLayer() * VisualizationConstants.SCALE_IN);
-    }
-
-    public void decreaseCanvasLinkSizeAll()
-    {
-    	final float multFactor = VisualizationConstants.SCALE_OUT;
-    	linkWidthIncreaseFactorRespectToDefault *= multFactor;
-        for (GUILink e : getCanvasAllGUILinks(true, true))
-        	e.setEdgeStroke(resizedBasicStroke(e.getStrokeIfActiveLayer(), multFactor), resizedBasicStroke(e.getStrokeIfNotActiveLayer(), multFactor));
-    }
-
-    public void increaseCanvasLinkSizeAll()
-    {
-    	final float multFactor = VisualizationConstants.SCALE_IN;
-    	linkWidthIncreaseFactorRespectToDefault *= multFactor;
-        for (GUILink e : getCanvasAllGUILinks(true, true))
-        	e.setEdgeStroke(resizedBasicStroke(e.getStrokeIfActiveLayer(), multFactor), resizedBasicStroke(e.getStrokeIfNotActiveLayer(), multFactor));
-    }
-
-    public int getCanvasNumberOfVisibleLayers()
-    {
-        return cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.size();
-    }
-
-    public boolean isShowInCanvasInterLayerLinks()
-    { return canvasController.isShowInterLayerLinks(); }
-
-    public void setShowInCanvasInterLayerLinks(boolean showInterLayerLinks)
-    { canvasController.setShowInterLayerLinks(showInterLayerLinks); }
-
-    public boolean isCanvasShowNodeNames()
-    { return canvasController.isShowNodeNames(); }
-
-    public void setCanvasShowNodeNames(boolean showNodeNames)
-    {
-        canvasController.setShowNodeNames(showNodeNames);
-    }
-
-    public boolean isCanvasShowLinkLabels()
-    {
-        return canvasController.isShowLinkLabels();
-    }
-
-    public void setCanvasShowLinkLabels(boolean showLinkLabels)
-    {
-        canvasController.setShowLinkLabels(showLinkLabels);
-    }
-
-    public boolean isCanvasShowNonConnectedNodes()
-    {
-        return canvasController.isShowNonConnectedNodes()
-    }
-
-    public void setCanvasShowNonConnectedNodes(boolean showNonConnectedNodes) { canvasController.setShowNonConnectedNodes(showNonConnectedNodes); }
-
-    public Set<GUILink> getCanvasAllGUILinks(boolean includeRegularLinks, boolean includeInterLayerLinks)
-    {
-        Set<GUILink> res = new HashSet<>();
-        if (includeRegularLinks) res.addAll(cache_canvasRegularLinkMap.values());
-        if (includeInterLayerLinks)
-            for (Node n : this.getNetPlan().getNodes())
-                res.addAll(this.cache_canvasIntraNodeGUILinks.get(n));
-        return res;
-    }
-
-    public Set<GUINode> getCanvasAllGUINodes()
-    {
-        Set<GUINode> res = new HashSet<>();
-        for (List<GUINode> list : this.cache_mapNode2ListVerticallyStackedGUINodes.values()) res.addAll(list);
-        return res;
-    }
-
-
-    public double getCanvasDefaultVerticalDistanceForInterLayers()
-    {
-        if (this.getNetPlan().getNumberOfNodes() == 0) return 1.0;
-        final int numVisibleLayers = getCanvasNumberOfVisibleLayers() == 0 ? this.getNetPlan().getNumberOfLayers() : getCanvasNumberOfVisibleLayers();
-        double minY = Double.MAX_VALUE;
-        double maxY = -Double.MAX_VALUE;
-        for (Node n : this.getNetPlan().getNodes())
-        {
-            final double y = n.getXYPositionMap().getY();
-            minY = Math.min(minY, y);
-            maxY = Math.max(maxY, y);
-        }
-        if ((maxY - minY < 1e-6)) return Math.abs(maxY) / (30 * numVisibleLayers);
-        return (maxY - minY) / (30 * numVisibleLayers);
-    }
-
 
     /**
      * To call when the topology has new/has removed any link or node, but keeping the same layers.
@@ -624,472 +377,6 @@ public class VisualizationMediator
         return Pair.of(newLayerOrderMap, newLayerVisibilityMap);
     }
 
-    public boolean isElementPicked()
-    {
-        return pickedElementType != null;
-    }
-
-    public NetworkElementType getPickedElementType()
-    {
-        return pickedElementType;
-    }
-
-    public NetworkElement getPickedNetworkElement()
-    {
-        return pickedElementNotFR;
-    }
-
-    public Pair<Demand, Link> getPickedForwardingRule()
-    {
-        return pickedElementFR;
-    }
-
-    public void pickLayer(NetworkLayer pickedLayer)
-    {
-        resetPickedState();
-        this.pickedElementType = NetworkElementType.LAYER;
-        this.pickedElementFR = null;
-        this.pickedElementNotFR = pickedLayer;
-        pickTimeLineManager.addElement(this.getNetPlan(), pickedLayer);
-    }
-
-    public void pickDemand(Demand pickedDemand)
-    {
-        resetPickedState();
-        this.pickedElementType = NetworkElementType.DEMAND;
-        this.pickedElementFR = null;
-        this.pickedElementNotFR = pickedDemand;
-        pickTimeLineManager.addElement(this.getNetPlan(), pickedDemand);
-
-        final boolean isDemandLayerVisibleInTheCanvas = isLayerVisibleInCanvas(pickedDemand.getLayer());
-        final GUINode gnOrigin = getCanvasAssociatedGUINode(pickedDemand.getIngressNode(), pickedDemand.getLayer());
-        final GUINode gnDestination = getCanvasAssociatedGUINode(pickedDemand.getEgressNode(), pickedDemand.getLayer());
-        Pair<Set<Link>, Set<Link>> thisLayerPropagation = null;
-        if (showInCanvasThisLayerPropagation && isDemandLayerVisibleInTheCanvas)
-        {
-            thisLayerPropagation = pickedDemand.getLinksThisLayerPotentiallyCarryingTraffic(false);
-            final Set<Link> linksPrimary = thisLayerPropagation.getFirst();
-            final Set<Link> linksBackup = thisLayerPropagation.getSecond();
-            final Set<Link> linksPrimaryAndBackup = Sets.intersection(linksPrimary, linksBackup);
-            drawColateralLinks(Sets.difference(linksPrimary, linksPrimaryAndBackup), VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-            drawColateralLinks(Sets.difference(linksBackup, linksPrimaryAndBackup), VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_BACKUP);
-            drawColateralLinks(linksPrimaryAndBackup, VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_BACKUPANDPRIMARY);
-        }
-        if (showInCanvasLowerLayerPropagation && (this.getNetPlan().getNumberOfLayers() > 1))
-        {
-            if (thisLayerPropagation == null)
-                thisLayerPropagation = pickedDemand.getLinksThisLayerPotentiallyCarryingTraffic(false);
-            final Pair<Set<Demand>, Set<Pair<MulticastDemand, Node>>> downLayerInfoPrimary = getDownCoupling(thisLayerPropagation.getFirst());
-            final Pair<Set<Demand>, Set<Pair<MulticastDemand, Node>>> downLayerInfoBackup = getDownCoupling(thisLayerPropagation.getSecond());
-            final InterLayerPropagationGraph ipgPrimary = new InterLayerPropagationGraph(downLayerInfoPrimary.getFirst(), null, downLayerInfoPrimary.getSecond(), false, false);
-            final InterLayerPropagationGraph ipgBackup = new InterLayerPropagationGraph(downLayerInfoBackup.getFirst(), null, downLayerInfoBackup.getSecond(), false, false);
-            final Set<Link> linksPrimary = ipgPrimary.getLinksInGraph();
-            final Set<Link> linksBackup = ipgBackup.getLinksInGraph();
-            final Set<Link> linksPrimaryAndBackup = Sets.intersection(linksPrimary, linksBackup);
-            final Set<Link> linksOnlyPrimary = Sets.difference(linksPrimary, linksPrimaryAndBackup);
-            final Set<Link> linksOnlyBackup = Sets.difference(linksBackup, linksPrimaryAndBackup);
-            drawColateralLinks(linksOnlyPrimary, VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-            drawDownPropagationInterLayerLinks(linksOnlyPrimary, VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-            drawColateralLinks(linksOnlyBackup, VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_BACKUP);
-            drawDownPropagationInterLayerLinks(linksOnlyBackup, VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_BACKUP);
-            drawColateralLinks(linksPrimaryAndBackup, VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_BACKUPANDPRIMARY);
-            drawDownPropagationInterLayerLinks(linksPrimaryAndBackup, VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_BACKUPANDPRIMARY);
-        }
-        if (showInCanvasUpperLayerPropagation && (this.getNetPlan().getNumberOfLayers() > 1) && pickedDemand.isCoupled())
-        {
-            final InterLayerPropagationGraph ipg = new InterLayerPropagationGraph(null, Sets.newHashSet(pickedDemand.getCoupledLink()), null, true, false);
-            drawColateralLinks(ipg.getLinksInGraph(), VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-            drawDownPropagationInterLayerLinks(ipg.getLinksInGraph(), VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-        }
-        /* Picked link the last, so overrides the rest */
-        if (isDemandLayerVisibleInTheCanvas)
-        {
-            gnOrigin.setBorderPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_ORIGINFLOW);
-            gnOrigin.setFillPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_ORIGINFLOW);
-            gnDestination.setBorderPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_ENDFLOW);
-            gnDestination.setFillPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_ENDFLOW);
-        }
-    }
-
-    public void pickSRG(SharedRiskGroup pickedSRG)
-    {
-        resetPickedState();
-        this.pickedElementType = NetworkElementType.SRG;
-        this.pickedElementFR = null;
-        this.pickedElementNotFR = pickedSRG;
-        pickTimeLineManager.addElement(this.getNetPlan(), pickedSRG);
-
-        final Set<Link> allAffectedLinks = pickedSRG.getAffectedLinksAllLayers();
-        Map<Link, Triple<Map<Demand, Set<Link>>, Map<Demand, Set<Link>>, Map<Pair<MulticastDemand, Node>, Set<Link>>>> thisLayerPropInfo = new HashMap<>();
-        if (showInCanvasThisLayerPropagation)
-        {
-            for (Link link : allAffectedLinks)
-            {
-                thisLayerPropInfo.put(link, link.getLinksThisLayerPotentiallyCarryingTrafficTraversingThisLink(false));
-                final Set<Link> linksPrimary = thisLayerPropInfo.get(link).getFirst().values().stream().flatMap(set -> set.stream()).collect(Collectors.toSet());
-                final Set<Link> linksBackup = thisLayerPropInfo.get(link).getSecond().values().stream().flatMap(set -> set.stream()).collect(Collectors.toSet());
-                final Set<Link> linksMulticast = thisLayerPropInfo.get(link).getThird().values().stream().flatMap(set -> set.stream()).collect(Collectors.toSet());
-                drawColateralLinks(Sets.union(Sets.union(linksPrimary, linksBackup), linksMulticast), VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_AFFECTEDFAILURES);
-            }
-        }
-        if (showInCanvasLowerLayerPropagation && (this.getNetPlan().getNumberOfLayers() > 1))
-        {
-            final Set<Link> affectedCoupledLinks = allAffectedLinks.stream().filter(e -> e.isCoupled()).collect(Collectors.toSet());
-            final Pair<Set<Demand>, Set<Pair<MulticastDemand, Node>>> couplingInfo = getDownCoupling(affectedCoupledLinks);
-            final InterLayerPropagationGraph ipg = new InterLayerPropagationGraph(couplingInfo.getFirst(), null, couplingInfo.getSecond(), false, false);
-            final Set<Link> lowerLayerLinks = ipg.getLinksInGraph();
-            drawColateralLinks(lowerLayerLinks, VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_AFFECTEDFAILURES);
-            drawDownPropagationInterLayerLinks(lowerLayerLinks, VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_AFFECTEDFAILURES);
-        }
-        if (showInCanvasUpperLayerPropagation && (this.getNetPlan().getNumberOfLayers() > 1))
-        {
-            final Set<Demand> demandsPrimaryAndBackup = new HashSet<>();
-            final Set<Pair<MulticastDemand, Node>> demandsMulticast = new HashSet<>();
-            for (Link link : allAffectedLinks)
-            {
-                final Triple<Map<Demand, Set<Link>>, Map<Demand, Set<Link>>, Map<Pair<MulticastDemand, Node>, Set<Link>>> thisLinkInfo =
-                        showInCanvasThisLayerPropagation ? thisLayerPropInfo.get(link) : link.getLinksThisLayerPotentiallyCarryingTrafficTraversingThisLink(false);
-                demandsPrimaryAndBackup.addAll(Sets.union(thisLinkInfo.getFirst().keySet(), thisLinkInfo.getSecond().keySet()));
-                demandsMulticast.addAll(thisLinkInfo.getThird().keySet());
-            }
-            final Set<Link> coupledUpperLinks = getUpCoupling(demandsPrimaryAndBackup, demandsMulticast);
-            final InterLayerPropagationGraph ipg = new InterLayerPropagationGraph(null, coupledUpperLinks, null, true, false);
-            drawColateralLinks(ipg.getLinksInGraph(), VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_AFFECTEDFAILURES);
-            drawDownPropagationInterLayerLinks(ipg.getLinksInGraph(), VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_AFFECTEDFAILURES);
-        }
-        /* Picked link the last, so overrides the rest */
-        for (Link link : allAffectedLinks)
-        {
-            final GUILink gl = getCanvasAssociatedGUILink(link);
-            if (gl == null) continue;
-            gl.setHasArrow(true);
-            setCurrentDefaultEdgeStroke (gl , VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE_PICKED , VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE_PICKED);
-            final Paint color = link.isDown() ? VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_FAILED : VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_FAILED;
-            gl.setEdgeDrawPaint(color);
-            gl.setShownSeparated(true);
-        }
-        for (Node node : pickedSRG.getNodes())
-        {
-            for (GUINode gn : getCanvasVerticallyStackedGUINodes(node))
-            {
-                gn.setBorderPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_FAILED);
-                gn.setFillPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_FAILED);
-            }
-        }
-    }
-
-    public void pickMulticastDemand(MulticastDemand pickedDemand)
-    {
-        resetPickedState();
-        this.pickedElementType = NetworkElementType.MULTICAST_DEMAND;
-        this.pickedElementFR = null;
-        this.pickedElementNotFR = pickedDemand;
-        pickTimeLineManager.addElement(this.getNetPlan(), pickedDemand);
-
-        final boolean isDemandLayerVisibleInTheCanvas = isLayerVisibleInCanvas(pickedDemand.getLayer());
-        final GUINode gnOrigin = getCanvasAssociatedGUINode(pickedDemand.getIngressNode(), pickedDemand.getLayer());
-        Set<Link> linksThisLayer = null;
-        for (Node egressNode : pickedDemand.getEgressNodes())
-        {
-            final GUINode gnDestination = getCanvasAssociatedGUINode(egressNode, pickedDemand.getLayer());
-            if (showInCanvasThisLayerPropagation && isDemandLayerVisibleInTheCanvas)
-            {
-                linksThisLayer = pickedDemand.getLinksThisLayerPotentiallyCarryingTraffic(egressNode, false);
-                drawColateralLinks(linksThisLayer, VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-            }
-            if (showInCanvasLowerLayerPropagation && (this.getNetPlan().getNumberOfLayers() > 1))
-            {
-                if (linksThisLayer == null)
-                    linksThisLayer = pickedDemand.getLinksThisLayerPotentiallyCarryingTraffic(egressNode, false);
-                final Pair<Set<Demand>, Set<Pair<MulticastDemand, Node>>> downLayerInfo = getDownCoupling(linksThisLayer);
-                final InterLayerPropagationGraph ipg = new InterLayerPropagationGraph(downLayerInfo.getFirst(), null, downLayerInfo.getSecond(), false, false);
-                final Set<Link> linksLowerLayers = ipg.getLinksInGraph();
-                drawColateralLinks(linksLowerLayers, VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-                drawDownPropagationInterLayerLinks(linksLowerLayers, VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-            }
-            if (showInCanvasUpperLayerPropagation && (this.getNetPlan().getNumberOfLayers() > 1) && pickedDemand.isCoupled())
-            {
-                final Set<Link> upCoupledLink = getUpCoupling(null, Collections.singleton(Pair.of(pickedDemand, egressNode)));
-                final InterLayerPropagationGraph ipg = new InterLayerPropagationGraph(null, upCoupledLink, null, true, false);
-                drawColateralLinks(ipg.getLinksInGraph(), VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-                drawDownPropagationInterLayerLinks(ipg.getLinksInGraph(), VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-            }
-            /* Picked link the last, so overrides the rest */
-            if (isDemandLayerVisibleInTheCanvas)
-            {
-                gnDestination.setBorderPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_ENDFLOW);
-                gnDestination.setFillPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_ENDFLOW);
-            }
-        }
-        /* Picked link the last, so overrides the rest */
-        if (isDemandLayerVisibleInTheCanvas)
-        {
-            gnOrigin.setBorderPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_ORIGINFLOW);
-            gnOrigin.setFillPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_ORIGINFLOW);
-        }
-    }
-
-    public void pickRoute(Route pickedRoute)
-    {
-        resetPickedState();
-        this.pickedElementType = NetworkElementType.ROUTE;
-        this.pickedElementFR = null;
-        this.pickedElementNotFR = pickedRoute;
-        pickTimeLineManager.addElement(this.getNetPlan(), pickedRoute);
-
-        final boolean isRouteLayerVisibleInTheCanvas = isLayerVisibleInCanvas(pickedRoute.getLayer());
-        if (showInCanvasThisLayerPropagation && isRouteLayerVisibleInTheCanvas)
-        {
-            final List<Link> linksPrimary = pickedRoute.getSeqLinks();
-            drawColateralLinks(linksPrimary, pickedRoute.isBackupRoute() ? VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_BACKUP : VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-        }
-        if (showInCanvasLowerLayerPropagation && (this.getNetPlan().getNumberOfLayers() > 1))
-        {
-            final Pair<Set<Demand>, Set<Pair<MulticastDemand, Node>>> downInfo = getDownCoupling(pickedRoute.getSeqLinks());
-            final InterLayerPropagationGraph ipg = new InterLayerPropagationGraph(downInfo.getFirst(), null, downInfo.getSecond(), false, false);
-            drawColateralLinks(ipg.getLinksInGraph(), pickedRoute.isBackupRoute() ? VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_BACKUP : VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-            drawDownPropagationInterLayerLinks(ipg.getLinksInGraph(), pickedRoute.isBackupRoute() ? VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_BACKUP : VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-        }
-        if (showInCanvasUpperLayerPropagation && (this.getNetPlan().getNumberOfLayers() > 1) && pickedRoute.getDemand().isCoupled())
-        {
-            final InterLayerPropagationGraph ipg = new InterLayerPropagationGraph(null, Sets.newHashSet(pickedRoute.getDemand().getCoupledLink()), null, true, false);
-            drawColateralLinks(ipg.getLinksInGraph(), VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-            drawDownPropagationInterLayerLinks(ipg.getLinksInGraph(), VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-        }
-        /* Picked link the last, so overrides the rest */
-        if (isRouteLayerVisibleInTheCanvas)
-        {
-            final GUINode gnOrigin = getCanvasAssociatedGUINode(pickedRoute.getIngressNode(), pickedRoute.getLayer());
-            final GUINode gnDestination = getCanvasAssociatedGUINode(pickedRoute.getEgressNode(), pickedRoute.getLayer());
-            gnOrigin.setBorderPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_ORIGINFLOW);
-            gnOrigin.setFillPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_ORIGINFLOW);
-            gnDestination.setBorderPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_ENDFLOW);
-            gnDestination.setFillPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_ENDFLOW);
-        }
-    }
-
-    public void pickMulticastTree(MulticastTree pickedTree)
-    {
-        resetPickedState();
-        this.pickedElementType = NetworkElementType.MULTICAST_TREE;
-        this.pickedElementFR = null;
-        this.pickedElementNotFR = pickedTree;
-        pickTimeLineManager.addElement(this.getNetPlan(), pickedTree);
-
-        final boolean isTreeLayerVisibleInTheCanvas = isLayerVisibleInCanvas(pickedTree.getLayer());
-        final GUINode gnOrigin = getCanvasAssociatedGUINode(pickedTree.getIngressNode(), pickedTree.getLayer());
-        for (Node egressNode : pickedTree.getEgressNodes())
-        {
-            final GUINode gnDestination = getCanvasAssociatedGUINode(egressNode, pickedTree.getLayer());
-            if (showInCanvasThisLayerPropagation && isTreeLayerVisibleInTheCanvas)
-            {
-                final List<Link> linksPrimary = pickedTree.getSeqLinksToEgressNode(egressNode);
-                drawColateralLinks(linksPrimary, VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-            }
-            if (showInCanvasLowerLayerPropagation && (this.getNetPlan().getNumberOfLayers() > 1))
-            {
-                final Pair<Set<Demand>, Set<Pair<MulticastDemand, Node>>> downInfo = getDownCoupling(pickedTree.getSeqLinksToEgressNode(egressNode));
-                final InterLayerPropagationGraph ipg = new InterLayerPropagationGraph(downInfo.getFirst(), null, downInfo.getSecond(), false, false);
-                drawColateralLinks(ipg.getLinksInGraph(), VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-                drawDownPropagationInterLayerLinks(ipg.getLinksInGraph(), VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-            }
-            if (showInCanvasUpperLayerPropagation && (this.getNetPlan().getNumberOfLayers() > 1) && pickedTree.getMulticastDemand().isCoupled())
-            {
-                final Set<Link> upperCoupledLink = getUpCoupling(null, Arrays.asList(Pair.of(pickedTree.getMulticastDemand(), egressNode)));
-                final InterLayerPropagationGraph ipg = new InterLayerPropagationGraph(null, upperCoupledLink, null, true, false);
-                drawColateralLinks(ipg.getLinksInGraph(), VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-                drawDownPropagationInterLayerLinks(ipg.getLinksInGraph(), VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-            }
-            if (isTreeLayerVisibleInTheCanvas)
-            {
-                gnDestination.setBorderPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_ENDFLOW);
-                gnDestination.setFillPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_ENDFLOW);
-            }
-        }
-		/* Picked link the last, so overrides the rest */
-        if (isTreeLayerVisibleInTheCanvas)
-        {
-            gnOrigin.setBorderPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_ORIGINFLOW);
-            gnOrigin.setFillPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_ORIGINFLOW);
-        }
-    }
-
-    public void pickLink(Link pickedLink)
-    {
-        resetPickedState();
-        this.pickedElementType = NetworkElementType.LINK;
-        this.pickedElementFR = null;
-        this.pickedElementNotFR = pickedLink;
-        pickTimeLineManager.addElement(this.getNetPlan(), pickedLink);
-
-        final boolean isLinkLayerVisibleInTheCanvas = isLayerVisibleInCanvas(pickedLink.getLayer());
-        Triple<Map<Demand, Set<Link>>, Map<Demand, Set<Link>>, Map<Pair<MulticastDemand, Node>, Set<Link>>> thisLayerTraversalInfo = null;
-        if (showInCanvasThisLayerPropagation && isLinkLayerVisibleInTheCanvas)
-        {
-            thisLayerTraversalInfo = pickedLink.getLinksThisLayerPotentiallyCarryingTrafficTraversingThisLink(false);
-            final Set<Link> linksPrimary = thisLayerTraversalInfo.getFirst().values().stream().flatMap(set -> set.stream()).collect(Collectors.toSet());
-            final Set<Link> linksBackup = thisLayerTraversalInfo.getSecond().values().stream().flatMap(set -> set.stream()).collect(Collectors.toSet());
-            final Set<Link> linksMulticast = thisLayerTraversalInfo.getThird().values().stream().flatMap(set -> set.stream()).collect(Collectors.toSet());
-            drawColateralLinks(Sets.union(Sets.union(linksPrimary, linksBackup), linksMulticast), VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-        }
-        if (showInCanvasLowerLayerPropagation && (this.getNetPlan().getNumberOfLayers() > 1) && pickedLink.isCoupled())
-        {
-            final Pair<Set<Demand>, Set<Pair<MulticastDemand, Node>>> downLayerInfo = getDownCoupling(Arrays.asList(pickedLink));
-            final InterLayerPropagationGraph ipg = new InterLayerPropagationGraph(downLayerInfo.getFirst(), null, downLayerInfo.getSecond(), false, false);
-            drawColateralLinks(ipg.getLinksInGraph(), VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-            drawDownPropagationInterLayerLinks(ipg.getLinksInGraph(), VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-        }
-        if (showInCanvasUpperLayerPropagation && (this.getNetPlan().getNumberOfLayers() > 1))
-        {
-            if (thisLayerTraversalInfo == null)
-                thisLayerTraversalInfo = pickedLink.getLinksThisLayerPotentiallyCarryingTrafficTraversingThisLink(false);
-            final Set<Demand> demandsPrimaryAndBackup = Sets.union(thisLayerTraversalInfo.getFirst().keySet(), thisLayerTraversalInfo.getSecond().keySet());
-            final Set<Pair<MulticastDemand, Node>> mDemands = thisLayerTraversalInfo.getThird().keySet();
-            final Set<Link> initialUpperLinks = getUpCoupling(demandsPrimaryAndBackup, mDemands);
-            final InterLayerPropagationGraph ipg = new InterLayerPropagationGraph(null, Sets.newHashSet(initialUpperLinks), null, true, false);
-            drawColateralLinks(ipg.getLinksInGraph(), VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-            drawDownPropagationInterLayerLinks(ipg.getLinksInGraph(), VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-        }
-		/* Picked link the last, so overrides the rest */
-        if (isLinkLayerVisibleInTheCanvas)
-        {
-            final GUILink gl = getCanvasAssociatedGUILink(pickedLink);
-            gl.setHasArrow(true);
-            setCurrentDefaultEdgeStroke (gl , VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE_PICKED , VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE_PICKED);
-            final Paint color = pickedLink.isDown() ? VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_FAILED : VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED;
-            gl.setEdgeDrawPaint(color);
-            gl.setShownSeparated(true);
-        }
-    }
-
-    public void pickNode(Node pickedNode)
-    {
-        resetPickedState();
-        this.pickedElementType = NetworkElementType.NODE;
-        this.pickedElementFR = null;
-        this.pickedElementNotFR = pickedNode;
-        pickTimeLineManager.addElement(this.getNetPlan(), pickedNode);
-
-        for (GUINode gn : getCanvasVerticallyStackedGUINodes(pickedNode))
-        {
-            gn.setBorderPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_PICK);
-            gn.setFillPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_PICK);
-        }
-        for (Link e : Sets.union(pickedNode.getOutgoingLinks(this.getNetPlan().getNetworkLayerDefault()), pickedNode.getIncomingLinks(this.getNetPlan().getNetworkLayerDefault())))
-        {
-            final GUILink gl = getCanvasAssociatedGUILink(e);
-            gl.setShownSeparated(true);
-            gl.setHasArrow(true);
-        }
-    }
-
-    public void pickResource(Resource pickedResource)
-    {
-        resetPickedState();
-        this.pickedElementType = NetworkElementType.RESOURCE;
-        this.pickedElementFR = null;
-        this.pickedElementNotFR = pickedResource;
-        pickTimeLineManager.addElement(this.getNetPlan(), pickedResource);
-
-        for (GUINode gn : getCanvasVerticallyStackedGUINodes(pickedResource.getHostNode()))
-        {
-            gn.setBorderPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_RESOURCE);
-            gn.setFillPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_RESOURCE);
-        }
-    }
-
-    public void pickForwardingRule(Pair<Demand, Link> pickedFR)
-    {
-        resetPickedState();
-        this.pickedElementType = NetworkElementType.FORWARDING_RULE;
-        this.pickedElementFR = pickedFR;
-        this.pickedElementNotFR = null;
-        pickTimeLineManager.addElement(this.getNetPlan(), pickedFR);
-
-        final boolean isFRLayerVisibleInTheCanvas = isLayerVisibleInCanvas(pickedFR.getFirst().getLayer());
-        final Demand pickedDemand = pickedFR.getFirst();
-        final Link pickedLink = pickedFR.getSecond();
-        if (showInCanvasThisLayerPropagation && isFRLayerVisibleInTheCanvas)
-        {
-            final Triple<Map<Demand, Set<Link>>, Map<Demand, Set<Link>>, Map<Pair<MulticastDemand, Node>, Set<Link>>> triple =
-                    pickedLink.getLinksThisLayerPotentiallyCarryingTrafficTraversingThisLink(false);
-            final Set<Link> linksPrimary = triple.getFirst().get(pickedDemand);
-            final Set<Link> linksBackup = triple.getSecond().get(pickedDemand);
-            drawColateralLinks(Sets.union(linksPrimary, linksBackup), VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-        }
-        if (showInCanvasLowerLayerPropagation && (this.getNetPlan().getNumberOfLayers() > 1) && pickedLink.isCoupled())
-        {
-            final Pair<Set<Demand>, Set<Pair<MulticastDemand, Node>>> downLayerInfo = getDownCoupling(Arrays.asList(pickedLink));
-            final InterLayerPropagationGraph ipgCausedByLink = new InterLayerPropagationGraph(downLayerInfo.getFirst(), null, downLayerInfo.getSecond(), false, false);
-            final Set<Link> frPropagationLinks = ipgCausedByLink.getLinksInGraph();
-            drawColateralLinks(frPropagationLinks, VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-            drawDownPropagationInterLayerLinks(frPropagationLinks, VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-        }
-        if (showInCanvasUpperLayerPropagation && (this.getNetPlan().getNumberOfLayers() > 1) && pickedDemand.isCoupled())
-        {
-            final InterLayerPropagationGraph ipgCausedByDemand = new InterLayerPropagationGraph(null, Sets.newHashSet(pickedDemand.getCoupledLink()), null, true, false);
-            final Set<Link> frPropagationLinks = ipgCausedByDemand.getLinksInGraph();
-            drawColateralLinks(frPropagationLinks, VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-            drawDownPropagationInterLayerLinks(frPropagationLinks, VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
-        }
-		/* Picked link the last, so overrides the rest */
-        if (isFRLayerVisibleInTheCanvas)
-        {
-            final GUILink gl = getCanvasAssociatedGUILink(pickedLink);
-            gl.setHasArrow(true);
-            setCurrentDefaultEdgeStroke (gl , VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE_PICKED , VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE_PICKED);
-            final Paint color = pickedLink.isDown() ? VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_FAILED : VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED;
-            gl.setEdgeDrawPaint(color);
-            gl.setShownSeparated(true);
-            gl.getOriginNode().setBorderPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_ORIGINFLOW);
-            gl.getOriginNode().setFillPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_ORIGINFLOW);
-            gl.getDestinationNode().setBorderPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_ENDFLOW);
-            gl.getDestinationNode().setFillPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_ENDFLOW);
-        }
-    }
-
-    public void pickElement(NetworkElement e)
-    {
-        if (e instanceof Node) pickNode((Node) e);
-        else if (e instanceof Link) pickLink((Link) e);
-        else if (e instanceof Demand) pickDemand((Demand) e);
-        else if (e instanceof Route) pickRoute((Route) e);
-        else if (e instanceof MulticastDemand) pickMulticastDemand((MulticastDemand) e);
-        else if (e instanceof MulticastTree) pickMulticastTree((MulticastTree) e);
-        else if (e instanceof Resource) pickResource((Resource) e);
-        else if (e instanceof SharedRiskGroup) pickSRG((SharedRiskGroup) e);
-        else throw new RuntimeException();
-    }
-
-    public void resetPickedState()
-    {
-        this.pickedElementType = null;
-        this.pickedElementNotFR = null;
-        this.pickedElementFR = null;
-
-        for (GUINode n : getCanvasAllGUINodes())
-        {
-            n.setBorderPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR);
-            n.setFillPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR);
-        }
-        for (GUILink e : getCanvasAllGUILinks(true, false))
-        {
-            e.setHasArrow(VisualizationConstants.DEFAULT_REGGUILINK_HASARROW);
-            setCurrentDefaultEdgeStroke (e , VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE_ACTIVELAYER , VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE);
-            final boolean isDown = e.getAssociatedNetPlanLink().isDown();
-            final Paint color = isDown ? VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_FAILED : VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR;
-            e.setEdgeDrawPaint(color);
-            e.setShownSeparated(isDown);
-        }
-        for (GUILink e : getCanvasAllGUILinks(false, true))
-        {
-            e.setHasArrow(VisualizationConstants.DEFAULT_INTRANODEGUILINK_HASARROW);
-            setCurrentDefaultEdgeStroke (e , VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE , VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE);
-            e.setEdgeDrawPaint(VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGEDRAWCOLOR);
-            e.setShownSeparated(false);
-        }
-    }
-
     private void drawDownPropagationInterLayerLinks(Set<Link> links, Paint color)
     {
         for (Link link : links)
@@ -1103,14 +390,14 @@ public class VisualizationMediator
             if (!isLayerVisibleInCanvas(lowerLayer)) continue;
             for (GUILink interLayerLink : getCanvasIntraNodeGUILinkSequence(link.getOriginNode(), upperLayer, lowerLayer))
             {
-                setCurrentDefaultEdgeStroke (interLayerLink , VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE_PICKED , VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE_PICKED);
+                setCurrentDefaultEdgeStroke(interLayerLink, VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE_PICKED, VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE_PICKED);
                 interLayerLink.setEdgeDrawPaint(color);
                 interLayerLink.setShownSeparated(false);
                 interLayerLink.setHasArrow(true);
             }
             for (GUILink interLayerLink : getCanvasIntraNodeGUILinkSequence(link.getDestinationNode(), lowerLayer, upperLayer))
             {
-                setCurrentDefaultEdgeStroke (interLayerLink , VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE_PICKED , VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE_PICKED);
+                setCurrentDefaultEdgeStroke(interLayerLink, VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE_PICKED, VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE_PICKED);
                 interLayerLink.setEdgeDrawPaint(color);
                 interLayerLink.setShownSeparated(false);
                 interLayerLink.setHasArrow(true);
@@ -1124,7 +411,7 @@ public class VisualizationMediator
         {
             final GUILink glColateral = getCanvasAssociatedGUILink(link);
             if (glColateral == null) continue;
-            setCurrentDefaultEdgeStroke (glColateral , VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE_PICKED_COLATERALACTVELAYER , VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE_PICKED_COLATERALNONACTIVELAYER);
+            setCurrentDefaultEdgeStroke(glColateral, VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE_PICKED_COLATERALACTVELAYER, VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE_PICKED_COLATERALNONACTIVELAYER);
             final Paint color = link.isDown() ? VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_FAILED : colorIfNotFailedLink;
             glColateral.setEdgeDrawPaint(color);
             glColateral.setShownSeparated(true);
@@ -1161,94 +448,6 @@ public class VisualizationMediator
 //    			System.out.println(md.getSecond());
             }
         return res;
-    }
-
-    public List<NetworkLayer> getCanvasLayersInVisualizationOrder(boolean includeNonVisible)
-    {
-        BidiMap<Integer, NetworkLayer> map = includeNonVisible ? new DualHashBidiMap<>(MapUtils.invertMap(visualizationSnapshot.getMapCanvasLayerVisualizationOrder())) : cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.inverseBidiMap();
-        List<NetworkLayer> res = new ArrayList<>();
-        for (int vIndex = 0; vIndex < this.getNetPlan().getNumberOfLayers(); vIndex++)
-            res.add(map.get(vIndex));
-        return res;
-    }
-
-    public Map<NetworkLayer, Integer> getCanvasLayerOrderIndexMap(boolean includeNonVisible)
-    {
-        return includeNonVisible ? visualizationSnapshot.getMapCanvasLayerVisualizationOrder() : cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible;
-    }
-
-    /**
-     * @return the showLowerLayerPropagation
-     */
-    public boolean isShowInCanvasLowerLayerPropagation()
-    {
-        return showInCanvasLowerLayerPropagation;
-    }
-
-
-    /**
-     * @param showLowerLayerPropagation the showLowerLayerPropagation to set
-     */
-    public void setShowInCanvasLowerLayerPropagation(boolean showLowerLayerPropagation)
-    {
-        if (showLowerLayerPropagation == this.showInCanvasLowerLayerPropagation) return;
-        this.showInCanvasLowerLayerPropagation = showLowerLayerPropagation;
-        if (pickedElementType != null)
-            if (pickedElementNotFR != null)
-                this.pickElement(pickedElementNotFR);
-            else
-                this.pickForwardingRule(pickedElementFR);
-    }
-
-
-    /**
-     * @return the showUpperLayerPropagation
-     */
-    public boolean isShowInCanvasUpperLayerPropagation()
-    {
-        return showInCanvasUpperLayerPropagation;
-    }
-
-    /**
-     * @return the showThisLayerPropagation
-     */
-    public boolean isShowInCanvasThisLayerPropagation()
-    {
-        return showInCanvasThisLayerPropagation;
-    }
-
-
-    /**
-     * @param showUpperLayerPropagation the showUpperLayerPropagation to set
-     */
-    public void setShowInCanvasUpperLayerPropagation(boolean showUpperLayerPropagation)
-    {
-        if (showUpperLayerPropagation == this.showInCanvasUpperLayerPropagation) return;
-        this.showInCanvasUpperLayerPropagation = showUpperLayerPropagation;
-        if (pickedElementType != null)
-            if (pickedElementNotFR != null)
-                this.pickElement(pickedElementNotFR);
-            else
-                this.pickForwardingRule(pickedElementFR);
-    }
-
-    /**
-     * @param showThisLayerPropagation the showThisLayerPropagation to set
-     */
-    public void setShowInCanvasThisLayerPropagation(boolean showThisLayerPropagation)
-    {
-        if (showThisLayerPropagation == this.showInCanvasThisLayerPropagation) return;
-        this.showInCanvasThisLayerPropagation = showThisLayerPropagation;
-        if (pickedElementType != null)
-            if (pickedElementNotFR != null)
-                this.pickElement(pickedElementNotFR);
-            else
-                this.pickForwardingRule(pickedElementFR);
-    }
-
-    public Map<NetworkLayer, Boolean> getCanvasLayerVisibilityMap()
-    {
-        return Collections.unmodifiableMap(this.visualizationSnapshot.getMapCanvasLayerVisibility());
     }
 
     public static Pair<ImageIcon, Shape> getIcon(URL url, int height, Color borderColor)
@@ -1347,14 +546,14 @@ public class VisualizationMediator
             if (vs.pickedElementFR.getSecond().getNetPlan() != np) throw new RuntimeException();
     }
 
-    private static BasicStroke resizedBasicStroke (BasicStroke a , float multFactorSize)
+    private static BasicStroke resizedBasicStroke(BasicStroke a, float multFactorSize)
     {
-    	if (multFactorSize == 1) return a;
-    	return new BasicStroke(a.getLineWidth() * multFactorSize, a.getEndCap(), a.getLineJoin(), a.getMiterLimit(), a.getDashArray(), a.getDashPhase());
+        if (multFactorSize == 1) return a;
+        return new BasicStroke(a.getLineWidth() * multFactorSize, a.getEndCap(), a.getLineJoin(), a.getMiterLimit(), a.getDashArray(), a.getDashPhase());
     }
 
-    private void setCurrentDefaultEdgeStroke (GUILink e , BasicStroke a , BasicStroke na)
+    private void setCurrentDefaultEdgeStroke(GUILink e, BasicStroke a, BasicStroke na)
     {
-    	e.setEdgeStroke(resizedBasicStroke(a, linkWidthIncreaseFactorRespectToDefault), resizedBasicStroke(na, linkWidthIncreaseFactorRespectToDefault));
+        e.setEdgeStroke(resizedBasicStroke(a, linkWidthIncreaseFactorRespectToDefault), resizedBasicStroke(na, linkWidthIncreaseFactorRespectToDefault));
     }
 }
