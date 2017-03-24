@@ -13,7 +13,7 @@
 package com.net2plan.gui.plugins.networkDesign.topologyPane.jung;
 
 import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationConstants;
-import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationState;
+import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationMediator;
 import com.net2plan.interfaces.networkDesign.NetPlan;
 import com.net2plan.interfaces.networkDesign.NetworkLayer;
 import com.net2plan.interfaces.networkDesign.Node;
@@ -116,7 +116,7 @@ public class GUINode
         if (url == null) url = VisualizationConstants.DEFAULT_LAYERNAME2ICONURLMAP.get(layer.getName());
         final int height = layer.isDefaultLayer() ? (int) (iconHeightIfNotActive * VisualizationConstants.INCREASENODESIZEFACTORACTIVE) : (int) iconHeightIfNotActive;
         final Color borderColor = getBorderPaint() == VisualizationConstants.DEFAULT_GUINODE_COLOR ? VisualizationConstants.TRANSPARENTCOLOR : (Color) getBorderPaint();
-        return VisualizationState.getIcon(url, height, borderColor).getSecond();
+        return VisualizationMediator.getIcon(url, height, borderColor).getSecond();
     }
 
     public boolean decreaseFontSize()
@@ -193,7 +193,7 @@ public class GUINode
         if (url == null) url = VisualizationConstants.DEFAULT_LAYERNAME2ICONURLMAP.get(layer.getName());
         final int height = layer.isDefaultLayer() ? (int) (iconHeightIfNotActive * VisualizationConstants.INCREASENODESIZEFACTORACTIVE) : (int) iconHeightIfNotActive;
         final Color borderColor = getBorderPaint() == VisualizationConstants.DEFAULT_GUINODE_COLOR ? VisualizationConstants.TRANSPARENTCOLOR : (Color) getBorderPaint();
-        final Icon icon = VisualizationState.getIcon(url, height, borderColor).getFirst();
+        final Icon icon = VisualizationMediator.getIcon(url, height, borderColor).getFirst();
         return icon;
     }
 

@@ -11,7 +11,7 @@ import java.util.Map;
  * @author Jorge San Emeterio
  * @date 17-Jan-17
  */
-public final class VisualizationConstants
+final class VisualizationConstants
 {
     private VisualizationConstants()
     {

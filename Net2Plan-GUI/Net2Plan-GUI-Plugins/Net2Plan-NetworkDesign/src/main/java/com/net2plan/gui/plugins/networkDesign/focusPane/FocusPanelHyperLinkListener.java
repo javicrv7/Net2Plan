@@ -1,7 +1,7 @@
 package com.net2plan.gui.plugins.networkDesign.focusPane;
 
 import com.net2plan.gui.plugins.GUINetworkDesign;
-import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationState;
+import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationMediator;
 import com.net2plan.interfaces.networkDesign.Demand;
 import com.net2plan.interfaces.networkDesign.Link;
 import com.net2plan.interfaces.networkDesign.NetPlan;
@@ -40,7 +40,7 @@ public class FocusPanelHyperLinkListener implements HyperlinkListener
     public void hyperlinkUpdate(HyperlinkEvent e) 
     {
     	final NetPlan np = callback.getDesign();
-    	final VisualizationState vs = callback.getVisualizationState();
+    	final VisualizationMediator vs = callback.getVisualizationState();
 
     	/* When clicked */
         if(e.getEventType() == HyperlinkEvent.EventType.ACTIVATED)

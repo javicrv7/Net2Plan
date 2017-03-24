@@ -15,7 +15,7 @@ package com.net2plan.gui.plugins.networkDesign.topologyPane;
 import com.google.common.collect.Sets;
 import com.net2plan.gui.plugins.networkDesign.topologyPane.jung.GUILink;
 import com.net2plan.gui.plugins.networkDesign.topologyPane.jung.GUINode;
-import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationState;
+import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationMediator;
 import com.net2plan.gui.plugins.networkDesign.interfaces.ITopologyCanvas;
 import com.net2plan.gui.plugins.networkDesign.interfaces.ITopologyCanvasPlugin;
 import com.net2plan.gui.plugins.GUINetworkDesign;
@@ -110,7 +110,7 @@ public class PopupMenuPlugin extends MouseAdapter implements ITopologyCanvasPlug
     private List<JComponent> getNodeActions(Node node , Point2D pos)
     {
         final List<JComponent> actions = new LinkedList<JComponent>();
-        final VisualizationState vs = callback.getVisualizationState();
+        final VisualizationMediator vs = callback.getVisualizationState();
         if (!vs.isNetPlanEditable()) return actions;
         if (vs.isWhatIfAnalysisActive()) return actions;
         if (callback.inOnlineSimulationMode()) return actions;
@@ -151,7 +151,7 @@ public class PopupMenuPlugin extends MouseAdapter implements ITopologyCanvasPlug
     private List<JComponent> getLinkActions(Link link, Point2D pos)
     {
         List<JComponent> actions = new LinkedList<JComponent>();
-        final VisualizationState vs = callback.getVisualizationState();
+        final VisualizationMediator vs = callback.getVisualizationState();
         if (!vs.isNetPlanEditable()) return actions;
         if (vs.isWhatIfAnalysisActive()) return actions;
         if (callback.inOnlineSimulationMode()) return actions;
@@ -213,7 +213,7 @@ public class PopupMenuPlugin extends MouseAdapter implements ITopologyCanvasPlug
     public List<JComponent> getCanvasActionsMouseInNoNodeNorLinkPoint(Point2D positionInNetPlanCoordinates)
     {
         final List<JComponent> actions = new LinkedList<>();
-        final VisualizationState vs = callback.getVisualizationState();
+        final VisualizationMediator vs = callback.getVisualizationState();
         if (!vs.isNetPlanEditable()) return actions;
         if (vs.isWhatIfAnalysisActive()) return actions;
         if (callback.inOnlineSimulationMode()) return actions;

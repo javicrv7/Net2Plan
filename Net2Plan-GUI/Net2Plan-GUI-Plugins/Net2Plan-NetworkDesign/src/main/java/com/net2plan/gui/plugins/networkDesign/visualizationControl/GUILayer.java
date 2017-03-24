@@ -5,14 +5,14 @@ import com.net2plan.interfaces.networkDesign.NetworkLayer;
 /**
  * Created by Jorge San Emeterio on 15/03/17.
  */
-public class GUILayer
+class GUILayer
 {
     private final NetworkLayer associatedNetworkLayer;
     private boolean isLayerVisible;
     private boolean isLinksVisible;
     private int layerOrder;
 
-    public GUILayer(final NetworkLayer layer)
+    GUILayer(final NetworkLayer layer)
     {
         this.associatedNetworkLayer = layer;
         this.isLayerVisible = true;
@@ -20,7 +20,7 @@ public class GUILayer
         this.layerOrder = layer.getIndex();
     }
 
-    public GUILayer(final NetworkLayer layer, final int order, final boolean isVisible, final boolean linksVisible)
+    GUILayer(final NetworkLayer layer, final int order, final boolean isVisible, final boolean linksVisible)
     {
         this.associatedNetworkLayer = layer;
         this.layerOrder = order;

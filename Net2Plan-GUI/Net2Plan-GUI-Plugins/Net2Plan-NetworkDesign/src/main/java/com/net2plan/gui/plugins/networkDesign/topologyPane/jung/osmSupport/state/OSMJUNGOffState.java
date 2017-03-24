@@ -4,7 +4,7 @@ import com.net2plan.gui.plugins.networkDesign.topologyPane.jung.JUNGCanvas;
 import com.net2plan.gui.utils.FileChooserConfirmOverwrite;
 import com.net2plan.gui.plugins.networkDesign.topologyPane.jung.GUINode;
 import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationConstants;
-import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationState;
+import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationMediator;
 import com.net2plan.gui.plugins.networkDesign.interfaces.ITopologyCanvas;
 import com.net2plan.gui.plugins.GUINetworkDesign;
 import com.net2plan.interfaces.networkDesign.Node;
@@ -74,7 +74,7 @@ public class OSMJUNGOffState implements OSMState
     @Override
     public void zoomAll()
     {
-        final VisualizationState vs = callback.getVisualizationState();
+        final VisualizationMediator vs = callback.getVisualizationState();
         final Set<GUINode> visibleGUINodes = canvas.getAllVertices().stream().filter(vs::isVisibleInCanvas).collect(Collectors.toSet());
         if (visibleGUINodes.isEmpty()) return;
 

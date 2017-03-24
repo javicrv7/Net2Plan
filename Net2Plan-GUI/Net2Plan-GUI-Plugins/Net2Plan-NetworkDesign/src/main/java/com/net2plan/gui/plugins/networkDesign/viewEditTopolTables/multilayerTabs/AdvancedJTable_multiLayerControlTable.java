@@ -3,7 +3,7 @@ package com.net2plan.gui.plugins.networkDesign.viewEditTopolTables.multilayerTab
 import com.google.common.collect.Lists;
 import com.net2plan.gui.plugins.GUINetworkDesign;
 import com.net2plan.gui.plugins.networkDesign.CellRenderers;
-import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationState;
+import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationMediator;
 import com.net2plan.gui.utils.AdvancedJTable;
 import com.net2plan.gui.utils.ClassAwareTableModel;
 import com.net2plan.gui.utils.ColumnHeaderToolTips;
@@ -90,7 +90,7 @@ public class AdvancedJTable_multiLayerControlTable extends AdvancedJTable
 
     public List<Object[]> getAllData()
     {
-        final VisualizationState visualizationState = callback.getVisualizationState();
+        final VisualizationMediator visualizationState = callback.getVisualizationState();
 
         final List<Object[]> allLayerData = new ArrayList<>();
         for (NetworkLayer networkLayer : Lists.reverse(visualizationState.getCanvasLayersInVisualizationOrder(true)))
@@ -135,7 +135,7 @@ public class AdvancedJTable_multiLayerControlTable extends AdvancedJTable
             @Override
             public void setValueAt(Object newValue, int row, int column)
             {
-                final VisualizationState visualizationState = callback.getVisualizationState();
+                final VisualizationMediator visualizationState = callback.getVisualizationState();
 
                 final NetworkLayer selectedLayer = callback.getDesign().getNetworkLayer((int) this.getValueAt(row, COLUMN_INDEX));
 
@@ -280,7 +280,7 @@ public class AdvancedJTable_multiLayerControlTable extends AdvancedJTable
         @Override
         public void actionPerformed(ActionEvent e)
         {
-            final VisualizationState vs = callback.getVisualizationState();
+            final VisualizationMediator vs = callback.getVisualizationState();
 
             final Object src = e.getSource();
             if (src == btn_up)

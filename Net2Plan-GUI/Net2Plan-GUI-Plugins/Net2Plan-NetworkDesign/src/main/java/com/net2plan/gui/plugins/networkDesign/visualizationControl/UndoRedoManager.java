@@ -11,7 +11,7 @@ import java.util.Map;
 /**
  * Manages the undo/redo information, tracking the current netPlan and the visualization state
  */
-public class UndoRedoManager
+class UndoRedoManager
 {
     private final GUINetworkDesign callback;
     private LinkedList<VisualizationSnapshot> timeline;
@@ -20,7 +20,7 @@ public class UndoRedoManager
 
     private VisualizationSnapshot backupState;
 
-    public UndoRedoManager(GUINetworkDesign callback, int listMaxSize)
+    UndoRedoManager(GUINetworkDesign callback, int listMaxSize)
     {
         this.timeline = new LinkedList<>();
         this.timelineCursor = -1;

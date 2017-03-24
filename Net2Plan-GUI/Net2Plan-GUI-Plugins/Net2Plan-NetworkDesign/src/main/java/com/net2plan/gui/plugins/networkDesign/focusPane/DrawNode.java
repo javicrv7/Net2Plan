@@ -1,7 +1,7 @@
 package com.net2plan.gui.plugins.networkDesign.focusPane;
 
 import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationConstants;
-import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationState;
+import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationMediator;
 import com.net2plan.interfaces.networkDesign.NetworkElement;
 import com.net2plan.interfaces.networkDesign.NetworkLayer;
 import com.net2plan.interfaces.networkDesign.Node;
@@ -79,11 +79,11 @@ public class DrawNode
     	URL url = n.getUrlNodeIcon(layer);
     	if (url == null) url = layer.getDefaultNodeIconURL();
     	if (url == null) url = DEFAULT_LAYERNAME2ICONURLMAP.get(layer.getName());
-    	Pair<ImageIcon,Shape> pair = VisualizationState.getIcon(url , maxHeightOrSizeIcon , VisualizationConstants.TRANSPARENTCOLOR);
+    	Pair<ImageIcon,Shape> pair = VisualizationMediator.getIcon(url , maxHeightOrSizeIcon , VisualizationConstants.TRANSPARENTCOLOR);
     	if (pair.getFirst().getIconWidth() > maxHeightOrSizeIcon)
     	{
     		final int newHeight = maxHeightOrSizeIcon * (pair.getFirst().getIconWidth() / maxHeightOrSizeIcon);
-        	pair = VisualizationState.getIcon(url , newHeight , VisualizationConstants.TRANSPARENTCOLOR);
+        	pair = VisualizationMediator.getIcon(url , newHeight , VisualizationConstants.TRANSPARENTCOLOR);
     	}
     	return pair;
     }
@@ -91,11 +91,11 @@ public class DrawNode
     {
     	URL url = r.getUrlIcon();
     	if (url == null) url = VisualizationConstants.DEFAULT_RESPOURCETYPE2ICONURLMAP.get(r.getType());
-    	Pair<ImageIcon,Shape> pair = VisualizationState.getIcon(url , maxHeightOrSizeIcon , VisualizationConstants.TRANSPARENTCOLOR);
+    	Pair<ImageIcon,Shape> pair = VisualizationMediator.getIcon(url , maxHeightOrSizeIcon , VisualizationConstants.TRANSPARENTCOLOR);
     	if (pair.getFirst().getIconWidth() > maxHeightOrSizeIcon)
     	{
     		final int newHeight = maxHeightOrSizeIcon * (pair.getFirst().getIconWidth() / maxHeightOrSizeIcon);
-        	pair = VisualizationState.getIcon(url , newHeight , VisualizationConstants.TRANSPARENTCOLOR);
+        	pair = VisualizationMediator.getIcon(url , newHeight , VisualizationConstants.TRANSPARENTCOLOR);
     	}
     	return pair;
     }

@@ -20,7 +20,7 @@ import com.net2plan.gui.plugins.networkDesign.topologyPane.jung.osmSupport.OSMEx
 import com.net2plan.gui.utils.FileDrop;
 import com.net2plan.gui.utils.JPopUpButton;
 import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationConstants;
-import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationState;
+import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationMediator;
 import com.net2plan.gui.plugins.networkDesign.interfaces.ITopologyCanvas;
 import com.net2plan.gui.plugins.networkDesign.interfaces.ITopologyCanvasPlugin;
 import com.net2plan.gui.plugins.GUINetworkDesign;
@@ -377,7 +377,7 @@ public class TopologyPanel extends JPanel implements ActionListener//FrequentisB
 //        setAllowLoadTrafficDemand(callback.allowLoadTrafficDemands());
     }
 
-    public VisualizationState getVisualizationState()
+    public VisualizationMediator getVisualizationState()
     {
         return callback.getVisualizationState();
     }
@@ -386,7 +386,7 @@ public class TopologyPanel extends JPanel implements ActionListener//FrequentisB
     public void actionPerformed(ActionEvent e)
     {
         Object src = e.getSource();
-        final VisualizationState vs = callback.getVisualizationState();
+        final VisualizationMediator vs = callback.getVisualizationState();
         if (src == btn_load)
         {
             loadDesign();
@@ -592,7 +592,7 @@ public class TopologyPanel extends JPanel implements ActionListener//FrequentisB
             NetPlan aux = fc_netPlan.readNetPlan();
 
             callback.setCurrentNetPlanDoNotUpdateVisualization(aux);
-            final VisualizationState vs = callback.getVisualizationState();
+            final VisualizationMediator vs = callback.getVisualizationState();
             Pair<BidiMap<NetworkLayer, Integer>, Map<NetworkLayer, Boolean>> res =
                     vs.suggestCanvasUpdatedVisualizationLayerInfoForNewDesign(new HashSet<>(callback.getDesign().getNetworkLayers()));
             vs.setCanvasLayerVisibilityAndOrder(callback.getDesign(), res.getFirst(), res.getSecond());
@@ -630,7 +630,7 @@ public class TopologyPanel extends JPanel implements ActionListener//FrequentisB
             fc_netPlan.setCurrentDirectory(file.getParentFile());
 
             callback.setCurrentNetPlanDoNotUpdateVisualization(netPlan);
-            final VisualizationState vs = callback.getVisualizationState();
+            final VisualizationMediator vs = callback.getVisualizationState();
             Pair<BidiMap<NetworkLayer, Integer>, Map<NetworkLayer, Boolean>> res =
                     vs.suggestCanvasUpdatedVisualizationLayerInfoForNewDesign(new HashSet<>(callback.getDesign().getNetworkLayers()));
             vs.setCanvasLayerVisibilityAndOrder(callback.getDesign(), res.getFirst(), res.getSecond());

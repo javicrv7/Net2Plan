@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 /**
  * Created by Jorge San Emeterio on 8/03/17.
  */
-public class VisualizationSnapshot
+class VisualizationSnapshot
 {
     private NetPlan netPlan;
 

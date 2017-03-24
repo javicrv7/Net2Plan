@@ -3,7 +3,7 @@ package com.net2plan.gui.plugins.networkDesign.offlineExecPane;
 import com.net2plan.gui.plugins.networkDesign.ThreadExecutionController;
 import com.net2plan.gui.utils.ParameterValueDescriptionPanel;
 import com.net2plan.gui.utils.RunnableSelector;
-import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationState;
+import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationMediator;
 import com.net2plan.gui.plugins.GUINetworkDesign;
 import com.net2plan.interfaces.networkDesign.Configuration;
 import com.net2plan.interfaces.networkDesign.IAlgorithm;
@@ -97,7 +97,7 @@ public class OfflineExecutionPanel extends JPanel implements ThreadExecutionCont
 	{
         try {
             double execTime = (System.nanoTime() - start) / 1e9;
-            final VisualizationState vs = mainWindow.getVisualizationState();
+            final VisualizationMediator vs = mainWindow.getVisualizationState();
             final NetPlan netPlan = mainWindow.getDesign();
     		Pair<BidiMap<NetworkLayer, Integer>, Map<NetworkLayer,Boolean>> res = 
     				vs.suggestCanvasUpdatedVisualizationLayerInfoForNewDesign(new HashSet<> (netPlan.getNetworkLayers()));

@@ -54,7 +54,7 @@ import com.jom.JOMException;
 import com.net2plan.gui.plugins.GUINetworkDesign;
 import com.net2plan.gui.plugins.networkDesign.CellRenderers;
 import com.net2plan.gui.plugins.networkDesign.ReportBrowser;
-import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationState;
+import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationMediator;
 import com.net2plan.gui.utils.AdvancedJTable;
 import com.net2plan.gui.utils.ClassAwareTableModel;
 import com.net2plan.gui.utils.ColumnFitAdapter;
@@ -184,7 +184,7 @@ public class OnlineSimulationPane extends JTabbedPane implements ActionListener,
                 simKernel.reset();
                 simKernel.setNetPlan(simKernel.getInitialNetPlan());
                 mainWindow.setCurrentNetPlanDoNotUpdateVisualization(simKernel.getInitialNetPlan());
-                final VisualizationState vs = mainWindow.getVisualizationState();
+                final VisualizationMediator vs = mainWindow.getVisualizationState();
         		Pair<BidiMap<NetworkLayer, Integer>, Map<NetworkLayer,Boolean>> res = 
         				vs.suggestCanvasUpdatedVisualizationLayerInfoForNewDesign(new HashSet<> (mainWindow.getDesign().getNetworkLayers()));
         		vs.setCanvasLayerVisibilityAndOrder(mainWindow.getDesign() , res.getFirst() , res.getSecond());
@@ -323,7 +323,7 @@ public class OnlineSimulationPane extends JTabbedPane implements ActionListener,
         {
             updateSimulationInfo();
             mainWindow.setCurrentNetPlanDoNotUpdateVisualization(simKernel.getCurrentNetPlan());
-            final VisualizationState vs = mainWindow.getVisualizationState();
+            final VisualizationMediator vs = mainWindow.getVisualizationState();
     		Pair<BidiMap<NetworkLayer, Integer>, Map<NetworkLayer,Boolean>> res = 
     				vs.suggestCanvasUpdatedVisualizationLayerInfoForNewDesign(new HashSet<> (mainWindow.getDesign().getNetworkLayers()));
     		vs.setCanvasLayerVisibilityAndOrder(mainWindow.getDesign() , res.getFirst() , res.getSecond());

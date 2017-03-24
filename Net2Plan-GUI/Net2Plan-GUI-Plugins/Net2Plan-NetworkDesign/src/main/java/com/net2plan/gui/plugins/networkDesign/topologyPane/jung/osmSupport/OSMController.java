@@ -2,7 +2,7 @@ package com.net2plan.gui.plugins.networkDesign.topologyPane.jung.osmSupport;
 
 import com.net2plan.gui.plugins.networkDesign.topologyPane.TopologyPanel;
 import com.net2plan.gui.plugins.networkDesign.topologyPane.jung.GUINode;
-import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationState;
+import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationMediator;
 import com.net2plan.gui.plugins.networkDesign.interfaces.ITopologyCanvas;
 import com.net2plan.gui.plugins.GUINetworkDesign;
 import com.net2plan.interfaces.networkDesign.NetPlan;
@@ -150,7 +150,7 @@ public class OSMController
         final NetPlan netPlan = callback.getDesign();
         final Map<Node, GeoPosition> nodeToGeoPositionMap = netPlan.getNodes().stream().collect(Collectors.toMap(node->node, node -> new GeoPosition(node.getXYPositionMap().getY(), node.getXYPositionMap().getX())));
 
-        final VisualizationState topologyVisualizationState = callback.getVisualizationState();
+        final VisualizationMediator topologyVisualizationState = callback.getVisualizationState();
 
         // Getting interlayer distance for OSM coordinates
         canvas.updateInterLayerDistanceInNpCoordinates(topologyVisualizationState.getInterLayerSpaceInPixels());

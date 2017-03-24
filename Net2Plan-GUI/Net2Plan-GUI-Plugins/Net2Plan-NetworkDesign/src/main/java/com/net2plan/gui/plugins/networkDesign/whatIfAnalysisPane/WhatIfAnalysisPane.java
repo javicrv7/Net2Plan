@@ -14,7 +14,7 @@ package com.net2plan.gui.plugins.networkDesign.whatIfAnalysisPane;
 
 import com.net2plan.gui.utils.ParameterValueDescriptionPanel;
 import com.net2plan.gui.utils.RunnableSelector;
-import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationState;
+import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationMediator;
 import com.net2plan.gui.plugins.GUINetworkDesign;
 import com.net2plan.interfaces.networkDesign.*;
 import com.net2plan.interfaces.simulation.IEventGenerator;
@@ -270,9 +270,9 @@ public class WhatIfAnalysisPane extends JPanel implements IGUISimulationListener
         final Object src = e.getSource();
         if (src == btn_whatIfActivated)
         {
-            final VisualizationState vs = callback.getVisualizationState();
+            final VisualizationMediator vs = callback.getVisualizationState();
             if (callback.inOnlineSimulationMode()) btn_whatIfActivated.setSelected(false);
-            vs.setWhatIfAnalysisActive(btn_whatIfActivated.isSelected());
+            vs.setWhatIfAnalysisState(btn_whatIfActivated.isSelected());
             eventProcessorPanel.setEnabled(btn_whatIfActivated.isSelected());
         }
     }

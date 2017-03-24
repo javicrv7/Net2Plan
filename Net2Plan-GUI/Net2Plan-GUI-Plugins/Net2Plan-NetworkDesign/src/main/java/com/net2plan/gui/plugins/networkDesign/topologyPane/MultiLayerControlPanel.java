@@ -1,6 +1,6 @@
 package com.net2plan.gui.plugins.networkDesign.topologyPane;
 
-import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationState;
+import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationMediator;
 import com.net2plan.gui.plugins.networkDesign.viewEditTopolTables.multilayerTabs.AdvancedJTable_multiLayerControlTable;
 import com.net2plan.gui.plugins.GUINetworkDesign;
 import com.net2plan.interfaces.networkDesign.NetPlan;
@@ -91,7 +91,7 @@ public class MultiLayerControlPanel extends JPanel
             final Object src = e.getSource();
 
             final NetPlan netPlan = callback.getDesign();
-            final VisualizationState vs = callback.getVisualizationState();
+            final VisualizationMediator vs = callback.getVisualizationState();
 
             if (src == btn_showAllLayers)
             {

@@ -20,7 +20,7 @@ import com.net2plan.gui.plugins.GUINetworkDesign;
 import com.net2plan.gui.plugins.networkDesign.CellRenderers;
 import com.net2plan.gui.plugins.networkDesign.interfaces.ITableRowFilter;
 import com.net2plan.gui.plugins.networkDesign.viewEditTopolTables.tableVisualizationFilters.TBFToFromCarriedTraffic;
-import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationState;
+import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationMediator;
 import com.net2plan.gui.plugins.networkDesign.whatIfAnalysisPane.WhatIfAnalysisPane;
 import com.net2plan.gui.utils.ClassAwareTableModel;
 import com.net2plan.gui.utils.StringLabeller;
@@ -239,7 +239,7 @@ public class AdvancedJTable_link extends AdvancedJTable_networkElement
 
     private static TableModel createTableModel(final GUINetworkDesign callback) {
 //    	final TopologyPanel topologyPanel = callback.getTopologyPanel();
-    	final VisualizationState vs = callback.getVisualizationState();
+    	final VisualizationMediator vs = callback.getVisualizationState();
         TableModel linkTableModel = new ClassAwareTableModel(new Object[1][netPlanViewTableHeader.length], netPlanViewTableHeader) {
             private static final long serialVersionUID = 1L;
 
@@ -332,7 +332,7 @@ public class AdvancedJTable_link extends AdvancedJTable_networkElement
                             		whatIfPane.wait(); // wait until the simulation ends
                             		if (whatIfPane.getLastWhatIfExecutionException() != null) throw whatIfPane.getLastWhatIfExecutionException(); 
 
-                                    final VisualizationState vs = callback.getVisualizationState();
+                                    final VisualizationMediator vs = callback.getVisualizationState();
                             		Pair<BidiMap<NetworkLayer, Integer>, Map<NetworkLayer,Boolean>> res = 
                             				vs.suggestCanvasUpdatedVisualizationLayerInfoForNewDesign(new HashSet<> (callback.getDesign().getNetworkLayers()));
                             		vs.setCanvasLayerVisibilityAndOrder(callback.getDesign() , res.getFirst() , res.getSecond());

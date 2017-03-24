@@ -19,7 +19,7 @@ import com.net2plan.gui.plugins.networkDesign.CellRenderers;
 import com.net2plan.gui.plugins.networkDesign.interfaces.ITableRowFilter;
 import com.net2plan.gui.plugins.networkDesign.interfaces.ITopologyCanvas;
 import com.net2plan.gui.plugins.networkDesign.viewEditTopolTables.tableVisualizationFilters.TBFToFromCarriedTraffic;
-import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationState;
+import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationMediator;
 import com.net2plan.gui.plugins.networkDesign.whatIfAnalysisPane.WhatIfAnalysisPane;
 import com.net2plan.gui.utils.ClassAwareTableModel;
 import com.net2plan.gui.utils.WiderJComboBox;
@@ -34,7 +34,6 @@ import com.net2plan.utils.Pair;
 import com.net2plan.utils.StringUtils;
 import net.miginfocom.swing.MigLayout;
 import org.apache.commons.collections15.BidiMap;
-import org.apache.commons.math3.ml.neuralnet.UpdateAction;
 
 import javax.swing.*;
 import javax.swing.table.TableModel;
@@ -302,7 +301,7 @@ public class AdvancedJTable_node extends AdvancedJTable_networkElement
                                     if (whatIfPane.getLastWhatIfExecutionException() != null)
                                         throw whatIfPane.getLastWhatIfExecutionException();
 
-                                    final VisualizationState vs = callback.getVisualizationState();
+                                    final VisualizationMediator vs = callback.getVisualizationState();
                                     Pair<BidiMap<NetworkLayer, Integer>, Map<NetworkLayer, Boolean>> res =
                                             vs.suggestCanvasUpdatedVisualizationLayerInfoForNewDesign(new HashSet<>(callback.getDesign().getNetworkLayers()));
                                     vs.setCanvasLayerVisibilityAndOrder(callback.getDesign(), res.getFirst(), res.getSecond());

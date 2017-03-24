@@ -36,7 +36,7 @@ import com.net2plan.gui.plugins.networkDesign.topologyPane.jung.JUNGCanvas;
 import com.net2plan.gui.plugins.networkDesign.viewEditTopolTables.ViewEditTopologyTablesPane;
 import com.net2plan.gui.plugins.networkDesign.viewReportsPane.ViewReportPane;
 import com.net2plan.gui.plugins.networkDesign.visualizationControl.UndoRedoManager;
-import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationState;
+import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationMediator;
 import com.net2plan.gui.plugins.networkDesign.whatIfAnalysisPane.WhatIfAnalysisPane;
 import com.net2plan.gui.utils.ProportionalResizeJSplitPaneListener;
 import com.net2plan.interfaces.networkDesign.*;
@@ -87,7 +87,7 @@ public class GUINetworkDesign extends IGUIModule implements IVisualizationCallba
     private OnlineSimulationPane onlineSimulationPane;
     private WhatIfAnalysisPane whatIfAnalysisPane;
 
-    private VisualizationState vs;
+    private VisualizationMediator vs;
     private UndoRedoManager undoRedoManager;
 
     private NetPlan currentNetPlan;
@@ -176,7 +176,7 @@ public class GUINetworkDesign extends IGUIModule implements IVisualizationCallba
             mapLayer2VisualizationOrder.put(layer, mapLayer2VisualizationOrder.size());
             layerVisibilityMap.put(layer, true);
         }
-        this.vs = new VisualizationState(currentNetPlan, mapLayer2VisualizationOrder, layerVisibilityMap, MAXSIZEUNDOLISTPICK);
+        this.vs = new VisualizationMediator(currentNetPlan, mapLayer2VisualizationOrder, layerVisibilityMap, MAXSIZEUNDOLISTPICK);
 
         topologyPanel = new TopologyPanel(this, JUNGCanvas.class);
 
@@ -203,7 +203,7 @@ public class GUINetworkDesign extends IGUIModule implements IVisualizationCallba
         reportPane = new ViewReportPane(GUINetworkDesign.this, JSplitPane.VERTICAL_SPLIT);
 
         setCurrentNetPlanDoNotUpdateVisualization(currentNetPlan);
-        Pair<BidiMap<NetworkLayer, Integer>, Map<NetworkLayer, Boolean>> res = VisualizationState.generateCanvasDefaultVisualizationLayerInfo(getDesign());
+        Pair<BidiMap<NetworkLayer, Integer>, Map<NetworkLayer, Boolean>> res = VisualizationMediator.generateCanvasDefaultVisualizationLayerInfo(getDesign());
         vs.setCanvasLayerVisibilityAndOrder(getDesign(), res.getFirst(), res.getSecond());
 
         /* Initialize the undo/redo manager, and set its initial design */
@@ -515,7 +515,7 @@ public class GUINetworkDesign extends IGUIModule implements IVisualizationCallba
             ErrorHandling.addErrorOrException(ex, GUINetworkDesign.class);
             ErrorHandling.showErrorDialog("Unable to reset");
         }
-        Pair<BidiMap<NetworkLayer, Integer>, Map<NetworkLayer, Boolean>> res = VisualizationState.generateCanvasDefaultVisualizationLayerInfo(getDesign());
+        Pair<BidiMap<NetworkLayer, Integer>, Map<NetworkLayer, Boolean>> res = VisualizationMediator.generateCanvasDefaultVisualizationLayerInfo(getDesign());
         vs.setCanvasLayerVisibilityAndOrder(getDesign(), res.getFirst(), res.getSecond());
         updateVisualizationAfterNewTopology();
         undoRedoManager.addNetPlanChange();
@@ -754,7 +754,7 @@ public class GUINetworkDesign extends IGUIModule implements IVisualizationCallba
         whatIfAnalysisPane.setActionMap(this.getActionMap());
     }
 
-    public VisualizationState getVisualizationState()
+    public VisualizationMediator getVisualizationState()
     {
         return vs;
     }

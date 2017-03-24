@@ -1,7 +1,7 @@
 package com.net2plan.gui.plugins.networkDesign.focusPane;
 
 import com.google.common.collect.Sets;
-import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationState;
+import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationMediator;
 import com.net2plan.gui.plugins.GUINetworkDesign;
 import com.net2plan.interfaces.networkDesign.*;
 import com.net2plan.internal.Constants.NetworkElementType;
@@ -40,7 +40,7 @@ public class FocusPane extends JPanel
 
 	public void updateView ()
 	{
-		final VisualizationState vs = callback.getVisualizationState();
+		final VisualizationMediator vs = callback.getVisualizationState();
 		final NetworkElementType elementType = vs.getPickedElementType();
 
 		/* Check if remove everything */
@@ -456,7 +456,7 @@ public class FocusPane extends JPanel
 	static void processMouseClickInternalLink (String internalLink , GUINetworkDesign callback)
 	{
 		final NetPlan np = callback.getDesign();
-		final VisualizationState vs = callback.getVisualizationState();
+		final VisualizationMediator vs = callback.getVisualizationState();
 		if (internalLink.equals("")) return;
 		if (internalLink.startsWith("demand"))
 		{

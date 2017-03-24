@@ -14,7 +14,7 @@ package com.net2plan.gui.plugins.networkDesign.viewEditTopolTables.specificTable
 
 import com.google.common.collect.Sets;
 import com.net2plan.gui.utils.ClassAwareTableModel;
-import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationState;
+import com.net2plan.gui.plugins.networkDesign.visualizationControl.VisualizationMediator;
 import com.net2plan.gui.plugins.GUINetworkDesign;
 import com.net2plan.interfaces.networkDesign.NetPlan;
 import com.net2plan.interfaces.networkDesign.NetworkLayer;
@@ -212,7 +212,7 @@ public class AdvancedJTable_layer extends AdvancedJTable_networkElement
                                 try {
                                     netPlan.removeNetworkLayer(netPlan.getNetworkLayerFromId((long) itemId));
 
-                                    final VisualizationState vs = callback.getVisualizationState();
+                                    final VisualizationMediator vs = callback.getVisualizationState();
                             		Pair<BidiMap<NetworkLayer, Integer>, Map<NetworkLayer,Boolean>> res =
                     				vs.suggestCanvasUpdatedVisualizationLayerInfoForNewDesign(new HashSet<> (callback.getDesign().getNetworkLayers()));
                     		vs.setCanvasLayerVisibilityAndOrder(callback.getDesign() , res.getFirst() , res.getSecond());
@@ -266,7 +266,7 @@ public class AdvancedJTable_layer extends AdvancedJTable_networkElement
 
                 try {
                     netPlan.addLayer("Layer " + netPlan.getNumberOfLayers(), null, null, null, null , null);
-                    final VisualizationState vs = callback.getVisualizationState();
+                    final VisualizationMediator vs = callback.getVisualizationState();
             		Pair<BidiMap<NetworkLayer, Integer>, Map<NetworkLayer,Boolean>> res = vs.suggestCanvasUpdatedVisualizationLayerInfoForNewDesign(new HashSet<> (callback.getDesign().getNetworkLayers()));
             		vs.setCanvasLayerVisibilityAndOrder(callback.getDesign() , res.getFirst() , res.getSecond());
                     callback.updateVisualizationAfterChanges(Sets.newHashSet(NetworkElementType.LAYER));
