@@ -76,7 +76,7 @@ class CanvasControl
         this.nodeSizeIncreaseFactorRespectToDefault = 1;
     }
 
-    boolean isVisibleInCanvas(GUINode gn)
+    boolean isVisible(GUINode gn)
     {
         final Node n = gn.getAssociatedNode();
 
@@ -92,7 +92,7 @@ class CanvasControl
         return true;
     }
 
-    boolean isVisibleInCanvas(GUILink gl)
+    boolean isVisible(GUILink gl)
     {
         if (gl.isIntraNodeLink())
         {
@@ -106,7 +106,7 @@ class CanvasControl
             cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.get(gl.getOriginNode());
             boolean atLeastOneLowerLayerVisible = false;
             for (int vIndex = 0; vIndex <= lowerVIndex; vIndex++)
-                if (isVisibleInCanvas(getCanvasAssociatedGUINode(node, getCanvasNetworkLayerAtVisualizationOrderRemovingNonVisible(vIndex))))
+                if (isVisible(getCanvasAssociatedGUINode(node, getCanvasNetworkLayerAtVisualizationOrderRemovingNonVisible(vIndex))))
                 {
                     atLeastOneLowerLayerVisible = true;
                     break;
@@ -114,7 +114,7 @@ class CanvasControl
             if (!atLeastOneLowerLayerVisible) return false;
             boolean atLeastOneUpperLayerVisible = false;
             for (int vIndex = upperVIndex; vIndex < getCanvasNumberOfVisibleLayers(); vIndex++)
-                if (isVisibleInCanvas(getCanvasAssociatedGUINode(node, getCanvasNetworkLayerAtVisualizationOrderRemovingNonVisible(vIndex))))
+                if (isVisible(getCanvasAssociatedGUINode(node, getCanvasNetworkLayerAtVisualizationOrderRemovingNonVisible(vIndex))))
                 {
                     atLeastOneUpperLayerVisible = true;
                     break;

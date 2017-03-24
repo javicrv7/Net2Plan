@@ -43,7 +43,7 @@ public class NetPlanControl
 
     private ITableRowFilter tableRowFilter;
 
-    private boolean whatIfAnalysisActive;
+    private boolean whatIfAnalysisState;
 
     private static Map<Triple<URL, Integer, Color>, Pair<ImageIcon, Shape>> databaseOfAlreadyReadIcons = new HashMap<>(); // for each url, height, and border color, an image
 
@@ -52,7 +52,7 @@ public class NetPlanControl
         this.netPlan = netPlan;
 
         this.tableRowFilter = null;
-        this.whatIfAnalysisActive = false;
+        this.whatIfAnalysisState = false;
     }
 
     public NetPlan getNetPlan()
@@ -95,14 +95,14 @@ public class NetPlanControl
         this.tableRowFilter.recomputeApplyingShowIf_ThisAndThat(tableRowFilterToApply);
     }
 
-    public boolean isWhatIfAnalysisActive()
+    public boolean isWhatIfAnalysisOn()
     {
-        return whatIfAnalysisActive;
+        return whatIfAnalysisState;
     }
 
-    public void setWhatIfAnalysisState(boolean isWhatIfAnalysisActive)
+    public void setWhatIfAnalysisState(boolean state)
     {
-        this.whatIfAnalysisActive = isWhatIfAnalysisActive;
+        this.whatIfAnalysisState = state;
     }
 
     public static Pair<ImageIcon, Shape> getIcon(URL url, int height, Color borderColor)

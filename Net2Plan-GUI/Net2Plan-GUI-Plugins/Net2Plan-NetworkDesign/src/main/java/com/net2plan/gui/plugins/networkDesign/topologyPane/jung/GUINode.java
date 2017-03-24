@@ -109,16 +109,6 @@ public class GUINode
         return font;
     }
 
-    public Shape getShape()
-    {
-        URL url = npNode.getUrlNodeIcon(layer);
-        if (url == null) url = layer.getDefaultNodeIconURL();
-        if (url == null) url = VisualizationConstants.DEFAULT_LAYERNAME2ICONURLMAP.get(layer.getName());
-        final int height = layer.isDefaultLayer() ? (int) (iconHeightIfNotActive * VisualizationConstants.INCREASENODESIZEFACTORACTIVE) : (int) iconHeightIfNotActive;
-        final Color borderColor = getBorderPaint() == VisualizationConstants.DEFAULT_GUINODE_COLOR ? VisualizationConstants.TRANSPARENTCOLOR : (Color) getBorderPaint();
-        return VisualizationMediator.getIcon(url, height, borderColor).getSecond();
-    }
-
     public boolean decreaseFontSize()
     {
         final int currentSize = font.getSize();
@@ -197,13 +187,6 @@ public class GUINode
         return icon;
     }
 
-    //    private static Shape adjustShapeToSize (Shape s , double size_x , double size_y)
-//    {
-//    	AffineTransform transf = new AffineTransform();
-//    	final Rectangle currentShapeBounds = s.getBounds();
-//    	transf.scale(size_x / currentShapeBounds.getWidth() , size_y / currentShapeBounds.getHeight());
-//    	return transf.createTransformedShape(s);
-//    }
     private String getResourceName(Resource e)
     {
         return "Resource " + e.getIndex() + " (" + (e.getName().length() == 0 ? "No name" : e.getName()) + "). Type: " + e.getType();

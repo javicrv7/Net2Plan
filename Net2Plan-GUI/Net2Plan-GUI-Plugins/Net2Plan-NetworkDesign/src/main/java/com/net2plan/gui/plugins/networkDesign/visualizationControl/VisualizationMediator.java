@@ -1,23 +1,23 @@
 package com.net2plan.gui.plugins.networkDesign.visualizationControl;
 
+import com.net2plan.gui.plugins.networkDesign.interfaces.ITableRowFilter;
 import com.net2plan.gui.plugins.networkDesign.topologyPane.jung.GUILink;
 import com.net2plan.gui.plugins.networkDesign.topologyPane.jung.GUINode;
-import com.net2plan.gui.plugins.networkDesign.interfaces.ITableRowFilter;
-import com.net2plan.interfaces.networkDesign.*;
-import com.net2plan.utils.ImageUtils;
+import com.net2plan.interfaces.networkDesign.Link;
+import com.net2plan.interfaces.networkDesign.NetPlan;
+import com.net2plan.interfaces.networkDesign.NetworkLayer;
+import com.net2plan.interfaces.networkDesign.Node;
 import com.net2plan.utils.Pair;
-import com.net2plan.utils.Triple;
-import edu.uci.ics.jung.visualization.FourPassImageShaper;
+import com.sun.istack.internal.NotNull;
+import com.sun.istack.internal.Nullable;
 import org.apache.commons.collections15.BidiMap;
 
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.geom.AffineTransform;
-import java.awt.image.BufferedImage;
 import java.net.URL;
-import java.util.*;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class VisualizationMediator
 {
@@ -48,13 +48,33 @@ public class VisualizationMediator
         return this.getNetPlan().isModifiable();
     }
 
+    public ITableRowFilter getTableRowFilter()
+    {
+        return netPlanControl.getTableRowFilter();
+    }
+
+    public void updateTableRowFilter(@NotNull ITableRowFilter tableRowFilter)
+    {
+        if (tableRowFilter == null) throw new NullPointerException();
+        netPlanControl.updateTableRowFilter(tableRowFilter);
+    }
+
+    public boolean isWhatIfAnalysisOn()
+    {
+        return netPlanControl.isWhatIfAnalysisOn();
+    }
+
+    public void setWhatIfAnalysisState(final boolean state)
+    {
+        netPlanControl.setWhatIfAnalysisState(state);
+    }
 
     public int getNumberOfVisibleLayers()
     {
         return canvasController.getCanvasNumberOfVisibleLayers();
     }
 
-1    public Object getPickNavigationBackElement()
+    public Object getPickNavigationBackElement()
     {
         return pickTimeLineManager.getPickNavigationBackElement();
     }
@@ -62,6 +82,23 @@ public class VisualizationMediator
     public Object getPickNavigationForwardElement()
     {
         return pickTimeLineManager.getPickNavigationForwardElement();
+    }
+
+    public ImageIcon getIcon(@Nullable final URL url, int height, Color borderColor)
+    {
+        return netPlanControl.getIcon(url, height, borderColor).getFirst();
+    }
+
+    public boolean isVisible(@NotNull final GUINode node)
+    {
+        if (node == null) throw new NullPointerException();
+        return canvasController.isVisible(node);
+    }
+
+    public boolean isVisible(@NotNull final GUILink link)
+    {
+        if (link == null) throw new NullPointerException();
+        return canvasController.isVisible(link);
     }
 
     public static void checkNpToVsConsistency(VisualizationMediator vs, NetPlan np)
