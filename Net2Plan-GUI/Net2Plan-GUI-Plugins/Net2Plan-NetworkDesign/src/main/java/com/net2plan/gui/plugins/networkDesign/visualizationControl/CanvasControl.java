@@ -124,6 +124,16 @@ class CanvasControl
         }
     }
 
+    boolean isVisible(Node n)
+    {
+        return !nodeVisibilityMap.get(n);
+    }
+
+    boolean isVisible(Link e)
+    {
+        return !linkVisibilityMap.get(e);
+    }
+
     void show(Node n)
     {
         nodeVisibilityMap.put(n, true);
@@ -142,16 +152,6 @@ class CanvasControl
     void hide(Link e)
     {
         linkVisibilityMap.put(e, true);
-    }
-
-    boolean isHidden(Node n)
-    {
-        return nodeVisibilityMap.get(n);
-    }
-
-    boolean isHidden(Link e)
-    {
-        return linkVisibilityMap.get(e);
     }
 
     List<GUINode> getStackedGUINodes(Node n)
@@ -268,22 +268,22 @@ class CanvasControl
         return res;
     }
 
-    boolean isShowLowerLayerPropagation()
+    boolean isLowerLayerPropagationShown()
     {
         return showLowerLayerPropagation;
     }
 
-    boolean isShowUpperLayerPropagation()
+    boolean isUpperLayerPropagationShown()
     {
         return showUpperLayerPropagation;
     }
 
-    boolean isShowThisLayerPropagation()
+    boolean isThisLayerPropagationShown()
     {
         return showLayerPropagation;
     }
 
-    void setShowLowerLayerPropagation(boolean showLowerLayerPropagation)
+    void setLowerLayerPropagationVisibility(boolean showLowerLayerPropagation)
     {
         if (showLowerLayerPropagation == this.showLowerLayerPropagation) return;
         this.showLowerLayerPropagation = showLowerLayerPropagation;
@@ -294,7 +294,7 @@ class CanvasControl
                 this.pickForwardingRule(pickedElementFR);
     }
 
-    void setShowUpperLayerPropagation(boolean showUpperLayerPropagation)
+    void setUpperLayerPropagationVisibility(boolean showUpperLayerPropagation)
     {
         if (showUpperLayerPropagation == this.showUpperLayerPropagation) return;
         this.showUpperLayerPropagation = showUpperLayerPropagation;
@@ -305,7 +305,7 @@ class CanvasControl
                 this.pickForwardingRule(pickedElementFR);
     }
 
-    void setShowThisLayerPropagation(boolean showThisLayerPropagation)
+    void setThisLayerPropagationVisibility(boolean showThisLayerPropagation)
     {
         if (showThisLayerPropagation == this.showLayerPropagation) return;
         this.showLayerPropagation = showThisLayerPropagation;
@@ -316,52 +316,52 @@ class CanvasControl
                 this.pickForwardingRule(pickedElementFR);
     }
 
-    boolean isShowNodeNames()
+    boolean isNodeNamesShown()
     {
         return showNodeNames;
     }
 
-    void setShowNodeNames(boolean showNodeNames)
-    {
-        this.showNodeNames = showNodeNames;
-    }
-
-    boolean isShowLinkLabels()
+    boolean isLinkLabelsShown()
     {
         return showLinkLabels;
     }
 
-    void setShowLinkLabels(boolean showLinkLabels)
-    {
-        this.showLinkLabels = showLinkLabels;
-    }
-
-    boolean isShowLinksInNonActiveLayer()
+    boolean isLinksInNonActiveLayerShown()
     {
         return showLinksInNonActiveLayer;
     }
 
-    void setShowLinksInNonActiveLayer(boolean showLinksInNonActiveLayer)
-    {
-        this.showLinksInNonActiveLayer = showLinksInNonActiveLayer;
-    }
-
-    boolean isShowInterLayerLinks()
+    boolean isInterLayerLinksShown()
     {
         return showInterLayerLinks;
     }
 
-    void setShowInterLayerLinks(boolean showInterLayerLinks)
-    {
-        this.showInterLayerLinks = showInterLayerLinks;
-    }
-
-    boolean isShowNonConnectedNodes()
+    boolean isNonConnectedNodesShown()
     {
         return showNonConnectedNodes;
     }
 
-    void setShowNonConnectedNodes(boolean showNonConnectedNodes)
+    void setNodeNamesVisibility(boolean showNodeNames)
+    {
+        this.showNodeNames = showNodeNames;
+    }
+
+    void setLinkLabelsVisibility(boolean showLinkLabels)
+    {
+        this.showLinkLabels = showLinkLabels;
+    }
+
+    void setLinksInNonActiveLayerVisibility(boolean showLinksInNonActiveLayer)
+    {
+        this.showLinksInNonActiveLayer = showLinksInNonActiveLayer;
+    }
+
+    void setInterlayerLinksVisibility(boolean showInterLayerLinks)
+    {
+        this.showInterLayerLinks = showInterLayerLinks;
+    }
+
+    void setNonConnectedNodesVisibility(boolean showNonConnectedNodes)
     {
         this.showNonConnectedNodes = showNonConnectedNodes;
     }

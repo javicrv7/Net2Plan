@@ -49,27 +49,27 @@ public class VisualizationMediator
 
     public boolean isInterLayerLinksShown()
     {
-        return canvasController.isShowInterLayerLinks();
+        return canvasController.isInterLayerLinksShown();
     }
 
     public boolean isNodeNamesShown()
     {
-        return canvasController.isShowNodeNames();
+        return canvasController.isNodeNamesShown();
     }
 
     public boolean isLinkLabelsShown()
     {
-        return canvasController.isShowLinkLabels();
+        return canvasController.isLinkLabelsShown();
     }
 
     public boolean isNonConnectedNodesShown()
     {
-        return canvasController.isShowNonConnectedNodes();
+        return canvasController.isNonConnectedNodesShown();
     }
 
     public boolean isLinksInNonActiveLayersShown()
     {
-        return canvasController.isShowLinksInNonActiveLayer();
+        return canvasController.isLinksInNonActiveLayerShown();
     }
 
     public boolean isWhatIfAnalysisOn()
@@ -79,42 +79,42 @@ public class VisualizationMediator
 
     public boolean isLowerLayerPropagationShown()
     {
-        return canvasController.isShowLowerLayerPropagation();
+        return canvasController.isLowerLayerPropagationShown();
     }
 
     public boolean isUpperLayerPropagationShown()
     {
-        return canvasController.isShowUpperLayerPropagation();
+        return canvasController.isUpperLayerPropagationShown();
     }
 
     public boolean isCurrentLayerPropagationShown()
     {
-        return canvasController.isShowThisLayerPropagation();
+        return canvasController.isThisLayerPropagationShown();
     }
 
     public void setNodeNamesVisibility(final boolean showNodeNames)
     {
-        canvasController.setShowNodeNames(showNodeNames);
+        canvasController.setNodeNamesVisibility(showNodeNames);
     }
 
     public void setInterLayerLinksVisibility(boolean showInterLayerLinks)
     {
-        canvasController.setShowInterLayerLinks(showInterLayerLinks);
+        canvasController.setInterlayerLinksVisibility(showInterLayerLinks);
     }
 
     public void setLinkLabelsVisibility(final boolean showLinkLabels)
     {
-        canvasController.setShowLinkLabels(showLinkLabels);
+        canvasController.setLinkLabelsVisibility(showLinkLabels);
     }
 
     public void setNonConnectedNodesVisibility(final boolean showNonConnectedNodes)
     {
-        canvasController.setShowNonConnectedNodes(showNonConnectedNodes);
+        canvasController.setNonConnectedNodesVisibility(showNonConnectedNodes);
     }
 
     public void setLinksInNonActiveLayerVisibility(final boolean linksInNonActiveLayerVisibility)
     {
-        canvasController.setShowLinksInNonActiveLayer(linksInNonActiveLayerVisibility);
+        canvasController.setLinksInNonActiveLayerVisibility(linksInNonActiveLayerVisibility);
     }
 
     public void setWhatIfAnalysisState(final boolean state)
@@ -124,17 +124,17 @@ public class VisualizationMediator
 
     public void setLowerLayerPropagationVisibility(final boolean lowerLayerPropagationVisibility)
     {
-        canvasController.setShowLowerLayerPropagation(lowerLayerPropagationVisibility);
+        canvasController.setLowerLayerPropagationVisibility(lowerLayerPropagationVisibility);
     }
 
     public void setUpperLayerPropagationVisibility(final boolean upperLayerPropagationVisibility)
     {
-        canvasController.setShowUpperLayerPropagation(upperLayerPropagationVisibility);
+        canvasController.setUpperLayerPropagationVisibility(upperLayerPropagationVisibility);
     }
 
     public void setCurrentLayerPropagationVisibility(final boolean currentLayerPropagationVisibility)
     {
-        canvasController.setShowThisLayerPropagation(currentLayerPropagationVisibility);
+        canvasController.setThisLayerPropagationVisibility(currentLayerPropagationVisibility);
     }
 
     public void updateTableRowFilter(@NotNull ITableRowFilter tableRowFilter)
@@ -178,13 +178,13 @@ public class VisualizationMediator
     public boolean isVisible(@NotNull final Node node)
     {
         if (node == null) throw new NullPointerException();
-        return !canvasController.isHidden(node);
+        return !canvasController.isVisible(node);
     }
 
     public boolean isVisible(@NotNull final Link link)
     {
         if (link == null) throw new NullPointerException();
-        return !canvasController.isHidden(link);
+        return !canvasController.isVisible(link);
     }
 
     public boolean isVisible(@NotNull final NetworkLayer layer)
