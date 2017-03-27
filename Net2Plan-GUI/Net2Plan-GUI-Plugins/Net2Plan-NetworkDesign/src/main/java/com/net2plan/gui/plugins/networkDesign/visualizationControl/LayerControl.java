@@ -162,53 +162,6 @@ class LayerControl
         this.setCanvasLayerVisibilityAndOrder(mediator.getNetPlan(), null, null);
     }
 
-    private void setCurrentDefaultEdgeStroke(GUILink e, BasicStroke a, BasicStroke na)
-    {
-        e.setEdgeStroke(resizedBasicStroke(a, linkWidthIncreaseFactorRespectToDefault), resizedBasicStroke(na, linkWidthIncreaseFactorRespectToDefault));
-    }
-
-    private void drawColateralLinks(Collection<Link> links, Paint colorIfNotFailedLink)
-    {
-        for (Link link : links)
-        {
-            final GUILink glColateral = mediator.getAssociatedGUILink(link);
-            if (glColateral == null) continue;
-            setCurrentDefaultEdgeStroke(glColateral, VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE_PICKED_COLATERALACTVELAYER, VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE_PICKED_COLATERALNONACTIVELAYER);
-            final Paint color = link.isDown() ? VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_FAILED : colorIfNotFailedLink;
-            glColateral.setEdgeDrawPaint(color);
-            glColateral.setShownSeparated(true);
-            glColateral.setHasArrow(true);
-        }
-    }
-
-    private void drawDownPropagationInterLayerLinks(Set<Link> links, Paint color)
-    {
-        for (Link link : links)
-        {
-            final GUILink gl = mediator.getAssociatedGUILink(link);
-            if (gl == null) continue;
-            if (!link.isCoupled()) continue;
-            final boolean isCoupledToDemand = link.getCoupledDemand() != null;
-            final NetworkLayer upperLayer = link.getLayer();
-            final NetworkLayer lowerLayer = isCoupledToDemand ? link.getCoupledDemand().getLayer() : link.getCoupledMulticastDemand().getLayer();
-            if (!isLayerVisible(lowerLayer)) continue;
-            for (GUILink interLayerLink : mediator.getIntraNodeGUISequence(upperLayer, link.getOriginNode(), lowerLayer))
-            {
-                setCurrentDefaultEdgeStroke(interLayerLink, VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE_PICKED, VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE_PICKED);
-                interLayerLink.setEdgeDrawPaint(color);
-                interLayerLink.setShownSeparated(false);
-                interLayerLink.setHasArrow(true);
-            }
-            for (GUILink interLayerLink : mediator.getIntraNodeGUISequence(lowerLayer, link.getDestinationNode(), upperLayer))
-            {
-                setCurrentDefaultEdgeStroke(interLayerLink, VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE_PICKED, VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE_PICKED);
-                interLayerLink.setEdgeDrawPaint(color);
-                interLayerLink.setShownSeparated(false);
-                interLayerLink.setHasArrow(true);
-            }
-        }
-    }
-
     private Set<Link> getUpCoupling(Collection<Demand> demands, Collection<Pair<MulticastDemand, Node>> mDemands)
     {
         final Set<Link> res = new HashSet<>();
