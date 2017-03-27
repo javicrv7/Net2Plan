@@ -42,6 +42,8 @@ class CanvasControl
     private boolean showLayerPropagation;
     private boolean showNonConnectedNodes;
 
+    private int interLayerSpaceInPixels;
+
     private Map<Node, Boolean> nodeVisibilityMap;
     private Map<Link, Boolean> linkVisibilityMap;
 
@@ -364,6 +366,16 @@ class CanvasControl
     void setNonConnectedNodesVisibility(boolean showNonConnectedNodes)
     {
         this.showNonConnectedNodes = showNonConnectedNodes;
+    }
+
+    int getInterLayerSpaceInPixels()
+    {
+        return interLayerSpaceInPixels;
+    }
+
+    void setInterLayerSpaceInPixels(int interLayerSpaceInPixels)
+    {
+        this.interLayerSpaceInPixels = interLayerSpaceInPixels;
     }
 
     private Pair<Set<GUILink>, Set<GUILink>> getCanvasAssociatedGUILinksIncludingCoupling(Link e, boolean regularLinkIsPrimary)

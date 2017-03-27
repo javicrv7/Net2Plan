@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
  * @author Jorge San Emeterio Villalain
  * @date 24/03/17
  */
-public class LayerControl
+class LayerControl
 {
     private final VisualizationMediator mediator;
     private final VisualizationSnapshot visualizationSnapshot;
@@ -44,8 +44,6 @@ public class LayerControl
 
     private float linkWidthIncreaseFactorRespectToDefault;
     private float nodeSizeIncreaseFactorRespectToDefault;
-
-    private int interLayerSpaceInPixels;
 
     LayerControl(@NotNull final VisualizationMediator mediator)
     {
@@ -60,16 +58,7 @@ public class LayerControl
         this.nodeSizeIncreaseFactorRespectToDefault = 1;
     }
 
-    /**
-     * To call when the topology has new/has removed any link or node, but keeping the same layers.
-     * The topology is remade, which involves implicitly a reset of the view
-     */
-    public void recomputeCanvasTopologyBecauseOfLinkOrNodeAdditionsOrRemovals()
-    {
-        this.setCanvasLayerVisibilityAndOrder(mediator.getNetPlan(), null, null);
-    }
-
-    public void setLayerVisibility(final NetworkLayer layer, final boolean isVisible)
+    void setLayerVisibility(final NetworkLayer layer, final boolean isVisible)
     {
         if (!mediator.getNetPlan().getNetworkLayers().contains(layer)) throw new RuntimeException();
         BidiMap<NetworkLayer, Integer> new_layerVisiblityOrderMap = new DualHashBidiMap<>(this.visualizationSnapshot.getMapCanvasLayerVisualizationOrder());
@@ -78,29 +67,29 @@ public class LayerControl
         setCanvasLayerVisibilityAndOrder(mediator.getNetPlan(), new_layerVisiblityOrderMap, new_layerVisibilityMap);
     }
 
-    public boolean isLayerVisible(final NetworkLayer layer)
-    {
-        return visualizationSnapshot.getCanvasLayerVisibility(layer);
-    }
-
-    public void setLinksVisibility(final NetworkLayer layer, final boolean showLinks)
+    void setLinksVisibility(final NetworkLayer layer, final boolean showLinks)
     {
         if (!mediator.getNetPlan().getNetworkLayers().contains(layer)) throw new RuntimeException();
         visualizationSnapshot.getMapCanvasLinkVisibility().put(layer, showLinks);
     }
 
-    public boolean isLinksShown(final NetworkLayer layer)
+    boolean isLayerVisible(final NetworkLayer layer)
+    {
+        return visualizationSnapshot.getCanvasLayerVisibility(layer);
+    }
+
+    boolean isLinksShown(final NetworkLayer layer)
     {
         return visualizationSnapshot.getCanvasLinkVisibility(layer);
     }
 
-    public NetworkLayer getLayerAtPosition(final int layerPosition, final boolean considerNonVisible)
+    NetworkLayer getLayerAtPosition(final int layerPosition, final boolean considerNonVisible)
     {
         if (layerPosition < 0 || layerPosition >= mediator.getNumberOfVisibleLayers()) return null;
         return considerNonVisible ? MapUtils.invertMap(visualizationSnapshot.getMapCanvasLayerVisualizationOrder()).get(layerPosition) : MapUtils.invertMap(cache_mapLayerOrderNoInvisible).get(layerPosition);
     }
 
-    public int getLayerOrderPosition(@NotNull final NetworkLayer layer, final boolean considerNonVisible)
+    int getLayerOrderPosition(@NotNull final NetworkLayer layer, final boolean considerNonVisible)
     {
         if (layer == null) throw new RuntimeException("Layer cannot be refered to null.");
         Integer position = considerNonVisible ? visualizationSnapshot.getCanvasLayerVisualizationOrder(layer) : cache_mapLayerOrderNoInvisible.get(layer);
@@ -135,7 +124,7 @@ public class LayerControl
         return cache_mapLayerOrderNoInvisible.size();
     }
 
-    public static Pair<BidiMap<NetworkLayer, Integer>, Map<NetworkLayer, Boolean>> generateCanvasDefaultVisualizationLayerInfo(NetPlan np)
+    static Pair<BidiMap<NetworkLayer, Integer>, Map<NetworkLayer, Boolean>> generateCanvasDefaultVisualizationLayerInfo(NetPlan np)
     {
         final BidiMap<NetworkLayer, Integer> res_1 = new DualHashBidiMap<>();
         final Map<NetworkLayer, Boolean> res_2 = new HashMap<>();
@@ -148,7 +137,7 @@ public class LayerControl
         return Pair.of(res_1, res_2);
     }
 
-    public Pair<BidiMap<NetworkLayer, Integer>, Map<NetworkLayer, Boolean>> suggestCanvasUpdatedVisualizationLayerInfoForNewDesign(Set<NetworkLayer> newNetworkLayers)
+    Pair<BidiMap<NetworkLayer, Integer>, Map<NetworkLayer, Boolean>> suggestCanvasUpdatedVisualizationLayerInfoForNewDesign(Set<NetworkLayer> newNetworkLayers)
     {
         final Map<NetworkLayer, Boolean> oldLayerVisibilityMap = visualizationSnapshot.getMapCanvasLayerVisibility();
         final BidiMap<NetworkLayer, Integer> oldLayerOrderMap = new DualHashBidiMap<>(visualizationSnapshot.getMapCanvasLayerVisualizationOrder());
@@ -172,25 +161,24 @@ public class LayerControl
         return Pair.of(newLayerOrderMap, newLayerVisibilityMap);
     }
 
-    public int getInterLayerSpaceInPixels()
+    /**
+     * To call when the topology has new/has removed any link or node, but keeping the same layers.
+     * The topology is remade, which involves implicitly a reset of the view
+     */
+    void recomputeCanvasTopologyBecauseOfLinkOrNodeAdditionsOrRemovals()
     {
-        return interLayerSpaceInPixels;
+        this.setCanvasLayerVisibilityAndOrder(mediator.getNetPlan(), null, null);
     }
 
-    public void setInterLayerSpaceInPixels(int interLayerSpaceInPixels)
+    private void setCurrentDefaultEdgeStroke(GUILink e, BasicStroke a, BasicStroke na)
     {
-        this.interLayerSpaceInPixels = interLayerSpaceInPixels;
+        e.setEdgeStroke(resizedBasicStroke(a, linkWidthIncreaseFactorRespectToDefault), resizedBasicStroke(na, linkWidthIncreaseFactorRespectToDefault));
     }
 
     private static BasicStroke resizedBasicStroke(BasicStroke a, float multFactorSize)
     {
         if (multFactorSize == 1) return a;
         return new BasicStroke(a.getLineWidth() * multFactorSize, a.getEndCap(), a.getLineJoin(), a.getMiterLimit(), a.getDashArray(), a.getDashPhase());
-    }
-
-    private void setCurrentDefaultEdgeStroke(GUILink e, BasicStroke a, BasicStroke na)
-    {
-        e.setEdgeStroke(resizedBasicStroke(a, linkWidthIncreaseFactorRespectToDefault), resizedBasicStroke(na, linkWidthIncreaseFactorRespectToDefault));
     }
 
     private void drawColateralLinks(Collection<Link> links, Paint colorIfNotFailedLink)
@@ -235,6 +223,21 @@ public class LayerControl
         }
     }
 
+    private Set<Link> getUpCoupling(Collection<Demand> demands, Collection<Pair<MulticastDemand, Node>> mDemands)
+    {
+        final Set<Link> res = new HashSet<>();
+        if (demands != null)
+            for (Demand d : demands)
+                if (d.isCoupled()) res.add(d.getCoupledLink());
+        if (mDemands != null)
+            for (Pair<MulticastDemand, Node> md : mDemands)
+            {
+                if (md.getFirst().isCoupled())
+                    res.add(md.getFirst().getCoupledLinks().stream().filter(e -> e.getDestinationNode() == md.getSecond()).findFirst().get());
+            }
+        return res;
+    }
+
     private Pair<Set<Demand>, Set<Pair<MulticastDemand, Node>>> getDownCoupling(Collection<Link> links)
     {
         final Set<Demand> res_1 = new HashSet<>();
@@ -249,23 +252,6 @@ public class LayerControl
 
     }
 
-    private Set<Link> getUpCoupling(Collection<Demand> demands, Collection<Pair<MulticastDemand, Node>> mDemands)
-    {
-        final Set<Link> res = new HashSet<>();
-        if (demands != null)
-            for (Demand d : demands)
-                if (d.isCoupled()) res.add(d.getCoupledLink());
-        if (mDemands != null)
-            for (Pair<MulticastDemand, Node> md : mDemands)
-            {
-                if (md.getFirst().isCoupled())
-                    res.add(md.getFirst().getCoupledLinks().stream().filter(e -> e.getDestinationNode() == md.getSecond()).findFirst().get());
-//    			System.out.println(md.getFirst().getCoupledLinks().stream().map(e->e.getDestinationNode()).collect(Collectors.toList()));
-//    			System.out.println(md.getSecond());
-            }
-        return res;
-    }
-
     class VisualizationSnapshot
     {
         private NetPlan netPlan;
@@ -273,7 +259,7 @@ public class LayerControl
         private List<GUILayer> layerList;
         private Map<NetworkLayer, GUILayer> aux_layerToGUI;
 
-        public VisualizationSnapshot(@NotNull NetPlan netPlan)
+        VisualizationSnapshot(@NotNull NetPlan netPlan)
         {
             this.layerList = new ArrayList<>();
             this.aux_layerToGUI = new HashMap<>();
@@ -295,69 +281,69 @@ public class LayerControl
             }
         }
 
-        public NetPlan getNetPlan()
+        NetPlan getNetPlan()
         {
             return netPlan;
         }
 
-        public void resetSnapshot(NetPlan netPlan)
+        void resetSnapshot(NetPlan netPlan)
         {
             this.netPlan = netPlan;
             resetSnapshot();
         }
 
-        public Map<NetworkLayer, Integer> getMapCanvasLayerVisualizationOrder()
+        Map<NetworkLayer, Integer> getMapCanvasLayerVisualizationOrder()
         {
             return layerList.stream().collect(Collectors.toMap(GUILayer::getAssociatedNetworkLayer, GUILayer::getLayerOrder));
         }
 
-        public void setLayerVisualizationOrder(NetworkLayer layer, int order)
+        void setLayerVisualizationOrder(NetworkLayer layer, int order)
         {
             if (!aux_layerToGUI.containsKey(layer))
                 throw new RuntimeException("Layer does not belong to current NetPlan...");
             aux_layerToGUI.get(layer).setLayerOrder(order);
         }
 
-        public int getCanvasLayerVisualizationOrder(NetworkLayer layer)
+        int getCanvasLayerVisualizationOrder(NetworkLayer layer)
         {
             return aux_layerToGUI.get(layer).getLayerOrder();
         }
 
-        public Map<NetworkLayer, Boolean> getMapCanvasLayerVisibility()
+        Map<NetworkLayer, Boolean> getMapCanvasLayerVisibility()
         {
             return layerList.stream().collect(Collectors.toMap(GUILayer::getAssociatedNetworkLayer, GUILayer::isLayerVisible));
         }
 
-        public void addLayerVisibility(NetworkLayer layer, boolean visibility)
+        void addLayerVisibility(NetworkLayer layer, boolean visibility)
         {
             if (!aux_layerToGUI.containsKey(layer))
                 throw new RuntimeException("Layer does not belong to current NetPlan...");
             aux_layerToGUI.get(layer).setLayerVisibility(visibility);
         }
 
-        public boolean getCanvasLayerVisibility(NetworkLayer layer)
+        boolean getCanvasLayerVisibility(NetworkLayer layer)
         {
             return aux_layerToGUI.get(layer).isLayerVisible();
         }
 
-        public Map<NetworkLayer, Boolean> getMapCanvasLinkVisibility()
+        Map<NetworkLayer, Boolean> getMapCanvasLinkVisibility()
         {
             return layerList.stream().collect(Collectors.toMap(GUILayer::getAssociatedNetworkLayer, GUILayer::isLinksVisible));
         }
 
-        public boolean getCanvasLinkVisibility(NetworkLayer layer)
+        boolean getCanvasLinkVisibility(NetworkLayer layer)
         {
             return aux_layerToGUI.get(layer).isLinksVisible();
         }
 
-        public void addLinkVisibility(NetworkLayer layer, boolean visibility)
+        void addLinkVisibility(NetworkLayer layer, boolean visibility)
         {
             if (!aux_layerToGUI.containsKey(layer))
                 throw new RuntimeException("Layer does not belong to current NetPlan...");
             aux_layerToGUI.get(layer).setLinksVisibility(visibility);
         }
 
-        public VisualizationSnapshot copy()
+        VisualizationSnapshot copy()
         {
             final NetPlan npCopy = netPlan.copy();
 
@@ -382,7 +368,7 @@ public class LayerControl
             return snapshotCopy;
         }
 
-        public Triple<NetPlan, Map<NetworkLayer, Integer>, Map<NetworkLayer, Boolean>> getSnapshotDefinition()
+        Triple<NetPlan, Map<NetworkLayer, Integer>, Map<NetworkLayer, Boolean>> getSnapshotDefinition()
         {
             return Triple.unmodifiableOf(netPlan, getMapCanvasLayerVisualizationOrder(), getMapCanvasLayerVisibility());
         }
