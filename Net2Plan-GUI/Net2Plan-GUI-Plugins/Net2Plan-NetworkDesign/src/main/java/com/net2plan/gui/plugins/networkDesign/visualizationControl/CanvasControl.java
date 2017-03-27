@@ -44,6 +44,9 @@ class CanvasControl
 
     private int interLayerSpaceInPixels;
 
+    private float linkWidthIncreaseFactor;
+    private float nodeSizeIncreaseFactor;
+
     private Map<Node, Boolean> nodeVisibilityMap;
     private Map<Link, Boolean> linkVisibilityMap;
 
@@ -65,6 +68,11 @@ class CanvasControl
         this.showLowerLayerPropagation = true;
         this.showUpperLayerPropagation = true;
         this.showLayerPropagation = true;
+
+        this.interLayerSpaceInPixels = 50;
+
+        this.linkWidthIncreaseFactor = 1;
+        this.nodeSizeIncreaseFactor = 1;
 
         this.nodeVisibilityMap = new HashMap<>();
         this.linkVisibilityMap = new HashMap<>();
@@ -108,7 +116,7 @@ class CanvasControl
             if (!atLeastOneLowerLayerVisible) return false;
             boolean atLeastOneUpperLayerVisible = false;
             for (int vIndex = upperVIndex; vIndex < mediator.getNumberOfLayers(false); vIndex++)
-                if (isVisible(getAssociatedGUINode(node, getCanvasNetworkLayerAtVisualizationOrderRemovingNonVisible(vIndex))))
+                if (isVisible(getAssociatedGUINode(node, mediator.getLayerAtPosition(vIndex, false))))
                 {
                     atLeastOneUpperLayerVisible = true;
                     break;
@@ -118,10 +126,10 @@ class CanvasControl
         {
             final Link e = gl.getAssociatedNetPlanLink();
 
-            if (!visualizationSnapshot.getCanvasLinkVisibility(e.getLayer())) return false;
-            if (linksToHideInCanvasAsMandatedByUserInTable.contains(e)) return false;
-            final boolean inActiveLayer = e.getLayer() == this.getNetPlan().getNetworkLayerDefault();
-            if (!showInCanvasLinksInNonActiveLayer && !inActiveLayer) return false;
+            if (!mediator.isVisible(e.getLayer())) return false;
+            if (!mediator.isVisible(e)) return false;
+            final boolean inActiveLayer = e.getLayer() == mediator.getNetPlan().getNetworkLayerDefault();
+            if (!showLinksInNonActiveLayer && !inActiveLayer) return false;
             return true;
         }
     }
@@ -163,7 +171,7 @@ class CanvasControl
 
     GUINode getAssociatedGUINode(Node n, NetworkLayer layer)
     {
-        final Integer trueVisualizationIndex = cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.get(layer);
+        final Integer trueVisualizationIndex = mediator.getLayerOrderPosition(layer, false);
         if (trueVisualizationIndex == null) return null;
         return getStackedGUINodes(n).get(trueVisualizationIndex);
     }
@@ -175,8 +183,8 @@ class CanvasControl
 
     GUILink getIntraNodeGUILink(Node n, NetworkLayer from, NetworkLayer to)
     {
-        final Integer fromRealVIndex = cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.get(from);
-        final Integer toRealVIndex = cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.get(to);
+        final Integer fromRealVIndex = mediator.getLayerOrderPosition(from, false);
+        final Integer toRealVIndex = mediator.getLayerOrderPosition(to, false);
         if ((fromRealVIndex == null) || (toRealVIndex == null)) return null;
         return cache_mapNode2IntraNodeCanvasGUILinkMap.get(n).get(Pair.of(fromRealVIndex, toRealVIndex));
     }
@@ -190,8 +198,8 @@ class CanvasControl
     {
         if (from.getNetPlan() != mediator.getNetPlan()) throw new RuntimeException("Bad");
         if (to.getNetPlan() != mediator.getNetPlan()) throw new RuntimeException("Bad");
-        final Integer fromRealVIndex = cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.get(from);
-        final Integer toRealVIndex = cache_mapCanvasVisibleLayer2VisualizationOrderRemovingNonVisible.get(to);
+        final Integer fromRealVIndex = mediator.getLayerOrderPosition(from, false);
+        final Integer toRealVIndex = mediator.getLayerOrderPosition(to, false);
 
         final List<GUILink> res = new LinkedList<>();
         if ((fromRealVIndex == null) || (toRealVIndex == null)) return res;
@@ -225,14 +233,14 @@ class CanvasControl
 
     void decreaseNodeSizeAll()
     {
-        nodeSizeIncreaseFactorRespectToDefault *= VisualizationConstants.SCALE_OUT;
+        nodeSizeIncreaseFactor *= VisualizationConstants.SCALE_OUT;
         for (GUINode gn : getAllGUINodes())
             gn.setIconHeightInNonActiveLayer(gn.getIconHeightInNotActiveLayer() * VisualizationConstants.SCALE_OUT);
     }
 
     void increaseNodeSizeAll()
     {
-        nodeSizeIncreaseFactorRespectToDefault *= VisualizationConstants.SCALE_IN;
+        nodeSizeIncreaseFactor *= VisualizationConstants.SCALE_IN;
         for (GUINode gn : getAllGUINodes())
             gn.setIconHeightInNonActiveLayer(gn.getIconHeightInNotActiveLayer() * VisualizationConstants.SCALE_IN);
     }
@@ -240,7 +248,7 @@ class CanvasControl
     void decreaseLinkSizeAll()
     {
         final float multFactor = VisualizationConstants.SCALE_OUT;
-        linkWidthIncreaseFactorRespectToDefault *= multFactor;
+        linkWidthIncreaseFactor *= multFactor;
         for (GUILink e : getAllGUILinks(true, true))
             e.setEdgeStroke(resizedBasicStroke(e.getStrokeIfActiveLayer(), multFactor), resizedBasicStroke(e.getStrokeIfNotActiveLayer(), multFactor));
     }
@@ -248,7 +256,7 @@ class CanvasControl
     void increaseLinkSizeAll()
     {
         final float multFactor = VisualizationConstants.SCALE_IN;
-        linkWidthIncreaseFactorRespectToDefault *= multFactor;
+        linkWidthIncreaseFactor *= multFactor;
         for (GUILink e : getAllGUILinks(true, true))
             e.setEdgeStroke(resizedBasicStroke(e.getStrokeIfActiveLayer(), multFactor), resizedBasicStroke(e.getStrokeIfNotActiveLayer(), multFactor));
     }
@@ -289,33 +297,18 @@ class CanvasControl
     {
         if (showLowerLayerPropagation == this.showLowerLayerPropagation) return;
         this.showLowerLayerPropagation = showLowerLayerPropagation;
-        if (pickedElementType != null)
-            if (pickedElementNotFR != null)
-                this.pickElement(pickedElementNotFR);
-            else
-                this.pickForwardingRule(pickedElementFR);
     }
 
     void setUpperLayerPropagationVisibility(boolean showUpperLayerPropagation)
     {
         if (showUpperLayerPropagation == this.showUpperLayerPropagation) return;
         this.showUpperLayerPropagation = showUpperLayerPropagation;
-        if (pickedElementType != null)
-            if (pickedElementNotFR != null)
-                this.pickElement(pickedElementNotFR);
-            else
-                this.pickForwardingRule(pickedElementFR);
     }
 
     void setThisLayerPropagationVisibility(boolean showThisLayerPropagation)
     {
         if (showThisLayerPropagation == this.showLayerPropagation) return;
         this.showLayerPropagation = showThisLayerPropagation;
-        if (pickedElementType != null)
-            if (pickedElementNotFR != null)
-                this.pickElement(pickedElementNotFR);
-            else
-                this.pickForwardingRule(pickedElementFR);
     }
 
     boolean isNodeNamesShown()
@@ -376,6 +369,12 @@ class CanvasControl
     void setInterLayerSpaceInPixels(int interLayerSpaceInPixels)
     {
         this.interLayerSpaceInPixels = interLayerSpaceInPixels;
+    }
+
+    private static BasicStroke resizedBasicStroke(BasicStroke a, float multFactorSize)
+    {
+        if (multFactorSize == 1) return a;
+        return new BasicStroke(a.getLineWidth() * multFactorSize, a.getEndCap(), a.getLineJoin(), a.getMiterLimit(), a.getDashArray(), a.getDashPhase());
     }
 
     private Pair<Set<GUILink>, Set<GUILink>> getCanvasAssociatedGUILinksIncludingCoupling(Link e, boolean regularLinkIsPrimary)

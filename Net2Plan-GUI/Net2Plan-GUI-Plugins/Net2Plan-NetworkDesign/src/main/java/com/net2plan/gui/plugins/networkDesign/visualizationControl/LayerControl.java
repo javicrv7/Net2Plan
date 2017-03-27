@@ -42,20 +42,12 @@ class LayerControl
 
     private Map<NetworkLayer, Integer> cache_mapLayerOrderNoInvisible;
 
-    private float linkWidthIncreaseFactorRespectToDefault;
-    private float nodeSizeIncreaseFactorRespectToDefault;
-
     LayerControl(@NotNull final VisualizationMediator mediator)
     {
         this.mediator = mediator;
         this.visualizationSnapshot = new VisualizationSnapshot(mediator.getNetPlan());
 
         this.cache_mapLayerOrderNoInvisible = new HashMap<>();
-
-        this.interLayerSpaceInPixels = 50;
-
-        this.linkWidthIncreaseFactorRespectToDefault = 1;
-        this.nodeSizeIncreaseFactorRespectToDefault = 1;
     }
 
     void setLayerVisibility(final NetworkLayer layer, final boolean isVisible)
@@ -85,7 +77,7 @@ class LayerControl
 
     NetworkLayer getLayerAtPosition(final int layerPosition, final boolean considerNonVisible)
     {
-        if (layerPosition < 0 || layerPosition >= mediator.getNumberOfVisibleLayers()) return null;
+        if (layerPosition < 0 || layerPosition >= mediator.getNumberOfLayers(false)) return null;
         return considerNonVisible ? MapUtils.invertMap(visualizationSnapshot.getMapCanvasLayerVisualizationOrder()).get(layerPosition) : MapUtils.invertMap(cache_mapLayerOrderNoInvisible).get(layerPosition);
     }
 
@@ -114,7 +106,7 @@ class LayerControl
         return includeNonVisible ? visualizationSnapshot.getMapCanvasLayerVisualizationOrder() : cache_mapLayerOrderNoInvisible;
     }
 
-    Map<NetworkLayer, Boolean> getLayerVisibilityMap()
+    Map<NetworkLayer, Boolean> getCanvasLayerVisibilityMap()
     {
         return Collections.unmodifiableMap(this.visualizationSnapshot.getMapCanvasLayerVisibility());
     }
@@ -173,12 +165,6 @@ class LayerControl
     private void setCurrentDefaultEdgeStroke(GUILink e, BasicStroke a, BasicStroke na)
     {
         e.setEdgeStroke(resizedBasicStroke(a, linkWidthIncreaseFactorRespectToDefault), resizedBasicStroke(na, linkWidthIncreaseFactorRespectToDefault));
-    }
-
-    private static BasicStroke resizedBasicStroke(BasicStroke a, float multFactorSize)
-    {
-        if (multFactorSize == 1) return a;
-        return new BasicStroke(a.getLineWidth() * multFactorSize, a.getEndCap(), a.getLineJoin(), a.getMiterLimit(), a.getDashArray(), a.getDashPhase());
     }
 
     private void drawColateralLinks(Collection<Link> links, Paint colorIfNotFailedLink)
