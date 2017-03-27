@@ -114,7 +114,7 @@ class LayerControl
         return includeNonVisible ? visualizationSnapshot.getMapCanvasLayerVisualizationOrder() : cache_mapLayerOrderNoInvisible;
     }
 
-    Map<NetworkLayer, Boolean> getCanvasLayerVisibilityMap()
+    Map<NetworkLayer, Boolean> getLayerVisibilityMap()
     {
         return Collections.unmodifiableMap(this.visualizationSnapshot.getMapCanvasLayerVisibility());
     }

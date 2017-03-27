@@ -92,6 +92,12 @@ public class VisualizationMediator
         return canvasController.isThisLayerPropagationShown();
     }
 
+    public boolean isGivenLayerLinksShown(@NotNull NetworkLayer networkLayer)
+    {
+        if (networkLayer == null) throw new NullPointerException();
+        return layerController.isLinksShown(networkLayer);
+    }
+
     public void setNodeNamesVisibility(final boolean showNodeNames)
     {
         canvasController.setNodeNamesVisibility(showNodeNames);
@@ -135,6 +141,17 @@ public class VisualizationMediator
     public void setCurrentLayerPropagationVisibility(final boolean currentLayerPropagationVisibility)
     {
         canvasController.setThisLayerPropagationVisibility(currentLayerPropagationVisibility);
+    }
+
+    public void setInterLayerDistance(final int distanceInPixels)
+    {
+        canvasController.setInterLayerSpaceInPixels(distanceInPixels);
+    }
+
+    public void setGivenLayerLinksVisibility(@NotNull final NetworkLayer networkLayer, final boolean linkVisibility)
+    {
+        if (networkLayer == null) throw new NullPointerException();
+        layerController.setLinksVisibility(networkLayer, linkVisibility);
     }
 
     public void updateTableRowFilter(@NotNull ITableRowFilter tableRowFilter)
@@ -210,6 +227,12 @@ public class VisualizationMediator
         canvasController.show(link);
     }
 
+    public void show(@NotNull final NetworkLayer networkLayer)
+    {
+        if (networkLayer == null) throw new NullPointerException();
+        layerController.setLayerVisibility(networkLayer, true);
+    }
+
     public void hide(@NotNull final Node node)
     {
         if (node == null) throw new NullPointerException();
@@ -220,6 +243,12 @@ public class VisualizationMediator
     {
         if (link == null) throw new NullPointerException();
         canvasController.hide(link);
+    }
+
+    public void hide(@NotNull final NetworkLayer networkLayer)
+    {
+        if (networkLayer == null) throw new NullPointerException();
+        layerController.setLayerVisibility(networkLayer, false);
     }
 
     public int getLayerOrderPosition(@NotNull final NetworkLayer layer, final boolean considerNonVisible)
@@ -241,6 +270,11 @@ public class VisualizationMediator
     public Map<NetworkLayer, Integer> getLayerOrderMap(final boolean considerNonVisible)
     {
         return layerController.getLayerOrderMap(considerNonVisible);
+    }
+
+    public Map<NetworkLayer, Boolean> getLayerVisibilityMap()
+    {
+        return layerController.getLayerVisibilityMap();
     }
 
     public Set<GUINode> getAllGUINodes()
@@ -286,6 +320,11 @@ public class VisualizationMediator
     public Set<GUILink> getIntraNodeGUILinks(@NotNull final Node node)
     {
         return canvasController.getIntraNodeGUILinks(node);
+    }
+
+    public int getInterLayerDistance()
+    {
+        return canvasController.getInterLayerSpaceInPixels();
     }
 
     public void increaseFontSize()
