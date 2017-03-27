@@ -106,7 +106,7 @@ class LayerControl
         return includeNonVisible ? visualizationSnapshot.getMapCanvasLayerVisualizationOrder() : cache_mapLayerOrderNoInvisible;
     }
 
-    Map<NetworkLayer, Boolean> getCanvasLayerVisibilityMap()
+    Map<NetworkLayer, Boolean> getLayerVisibilityMap()
     {
         return Collections.unmodifiableMap(this.visualizationSnapshot.getMapCanvasLayerVisibility());
     }
@@ -160,35 +160,6 @@ class LayerControl
     void recomputeCanvasTopologyBecauseOfLinkOrNodeAdditionsOrRemovals()
     {
         this.setCanvasLayerVisibilityAndOrder(mediator.getNetPlan(), null, null);
-    }
-
-    private Set<Link> getUpCoupling(Collection<Demand> demands, Collection<Pair<MulticastDemand, Node>> mDemands)
-    {
-        final Set<Link> res = new HashSet<>();
-        if (demands != null)
-            for (Demand d : demands)
-                if (d.isCoupled()) res.add(d.getCoupledLink());
-        if (mDemands != null)
-            for (Pair<MulticastDemand, Node> md : mDemands)
-            {
-                if (md.getFirst().isCoupled())
-                    res.add(md.getFirst().getCoupledLinks().stream().filter(e -> e.getDestinationNode() == md.getSecond()).findFirst().get());
-            }
-        return res;
-    }
-
-    private Pair<Set<Demand>, Set<Pair<MulticastDemand, Node>>> getDownCoupling(Collection<Link> links)
-    {
-        final Set<Demand> res_1 = new HashSet<>();
-        final Set<Pair<MulticastDemand, Node>> res_2 = new HashSet<>();
-        for (Link link : links)
-        {
-            if (link.getCoupledDemand() != null) res_1.add(link.getCoupledDemand());
-            else if (link.getCoupledMulticastDemand() != null)
-                res_2.add(Pair.of(link.getCoupledMulticastDemand(), link.getDestinationNode()));
-        }
-        return Pair.of(res_1, res_2);
-
     }
 
     class VisualizationSnapshot

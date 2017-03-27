@@ -12,6 +12,7 @@ import org.apache.commons.collections15.BidiMap;
 import javax.swing.*;
 import java.awt.*;
 import java.net.URL;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -270,9 +271,9 @@ public class VisualizationMediator
         return canvasController.getAllGUINodes();
     }
 
-    public Set<GUILink> getAllGUILinks()
+    public Set<GUILink> getAllGUILinks(final boolean includeRegularLinks, final boolean includeLayerLinks)
     {
-        return canvasController.getAllGUILinks(true, true);
+        return canvasController.getAllGUILinks(includeRegularLinks, includeLayerLinks);
     }
 
     public List<GUINode> getStackedGUINodes(@NotNull final Node node)
@@ -392,6 +393,11 @@ public class VisualizationMediator
             if (!(aux.getFirst() instanceof Demand) && !(aux.getSecond() instanceof Link)) throw new RuntimeException();
             pickTimeLineManager.addElement(this.getNetPlan(), aux);
         }
+    }
+
+    void setCurrentDefaultEdgeStroke(final GUILink e, final BasicStroke a, final BasicStroke na)
+    {
+        canvasController.setCurrentDefaultEdgeStroke(e, a, na);
     }
 
 //    public static void checkNpToVsConsistency(VisualizationMediator vs, NetPlan np)

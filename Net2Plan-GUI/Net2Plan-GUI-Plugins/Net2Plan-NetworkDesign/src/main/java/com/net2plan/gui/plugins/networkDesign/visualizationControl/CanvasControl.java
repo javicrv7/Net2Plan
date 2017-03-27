@@ -371,57 +371,15 @@ class CanvasControl
         this.interLayerSpaceInPixels = interLayerSpaceInPixels;
     }
 
-    private static BasicStroke resizedBasicStroke(BasicStroke a, float multFactorSize)
-    {
-        if (multFactorSize == 1) return a;
-        return new BasicStroke(a.getLineWidth() * multFactorSize, a.getEndCap(), a.getLineJoin(), a.getMiterLimit(), a.getDashArray(), a.getDashPhase());
-    }
-
-    private void setCurrentDefaultEdgeStroke(GUILink e, BasicStroke a, BasicStroke na)
+    void setCurrentDefaultEdgeStroke(GUILink e, BasicStroke a, BasicStroke na)
     {
         e.setEdgeStroke(resizedBasicStroke(a, linkWidthIncreaseFactor), resizedBasicStroke(na, linkWidthIncreaseFactor));
     }
 
-    private void drawColateralLinks(Collection<Link> links, Paint colorIfNotFailedLink)
+    private static BasicStroke resizedBasicStroke(BasicStroke a, float multFactorSize)
     {
-        for (Link link : links)
-        {
-            final GUILink glColateral = mediator.getAssociatedGUILink(link);
-            if (glColateral == null) continue;
-            setCurrentDefaultEdgeStroke(glColateral, VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE_PICKED_COLATERALACTVELAYER, VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE_PICKED_COLATERALNONACTIVELAYER);
-            final Paint color = link.isDown() ? VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_FAILED : colorIfNotFailedLink;
-            glColateral.setEdgeDrawPaint(color);
-            glColateral.setShownSeparated(true);
-            glColateral.setHasArrow(true);
-        }
-    }
-
-    private void drawDownPropagationInterLayerLinks(Set<Link> links, Paint color)
-    {
-        for (Link link : links)
-        {
-            final GUILink gl = mediator.getAssociatedGUILink(link);
-            if (gl == null) continue;
-            if (!link.isCoupled()) continue;
-            final boolean isCoupledToDemand = link.getCoupledDemand() != null;
-            final NetworkLayer upperLayer = link.getLayer();
-            final NetworkLayer lowerLayer = isCoupledToDemand ? link.getCoupledDemand().getLayer() : link.getCoupledMulticastDemand().getLayer();
-            if (!mediator.isVisible(lowerLayer)) continue;
-            for (GUILink interLayerLink : mediator.getIntraNodeGUISequence(upperLayer, link.getOriginNode(), lowerLayer))
-            {
-                setCurrentDefaultEdgeStroke(interLayerLink, VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE_PICKED, VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE_PICKED);
-                interLayerLink.setEdgeDrawPaint(color);
-                interLayerLink.setShownSeparated(false);
-                interLayerLink.setHasArrow(true);
-            }
-            for (GUILink interLayerLink : mediator.getIntraNodeGUISequence(lowerLayer, link.getDestinationNode(), upperLayer))
-            {
-                setCurrentDefaultEdgeStroke(interLayerLink, VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE_PICKED, VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE_PICKED);
-                interLayerLink.setEdgeDrawPaint(color);
-                interLayerLink.setShownSeparated(false);
-                interLayerLink.setHasArrow(true);
-            }
-        }
+        if (multFactorSize == 1) return a;
+        return new BasicStroke(a.getLineWidth() * multFactorSize, a.getEndCap(), a.getLineJoin(), a.getMiterLimit(), a.getDashArray(), a.getDashPhase());
     }
 
     private Pair<Set<GUILink>, Set<GUILink>> getCanvasAssociatedGUILinksIncludingCoupling(Link e, boolean regularLinkIsPrimary)
