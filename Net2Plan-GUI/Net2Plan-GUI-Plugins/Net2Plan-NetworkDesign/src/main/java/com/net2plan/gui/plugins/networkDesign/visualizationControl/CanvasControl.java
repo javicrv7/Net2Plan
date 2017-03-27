@@ -305,7 +305,7 @@ class CanvasControl
                 this.pickForwardingRule(pickedElementFR);
     }
 
-    void setShowInCanvasThisLayerPropagation(boolean showThisLayerPropagation)
+    void setShowThisLayerPropagation(boolean showThisLayerPropagation)
     {
         if (showThisLayerPropagation == this.showLayerPropagation) return;
         this.showLayerPropagation = showThisLayerPropagation;

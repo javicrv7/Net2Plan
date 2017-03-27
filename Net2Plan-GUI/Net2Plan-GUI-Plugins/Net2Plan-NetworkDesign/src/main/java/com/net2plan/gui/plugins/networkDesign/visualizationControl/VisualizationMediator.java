@@ -47,11 +47,6 @@ public class VisualizationMediator
         return this.getNetPlan().isModifiable();
     }
 
-    public void setInterLayerLinksVisibility(boolean showInterLayerLinks)
-    {
-        canvasController.setShowInterLayerLinks(showInterLayerLinks);
-    }
-
     public boolean isInterLayerLinksShown()
     {
         return canvasController.isShowInterLayerLinks();
@@ -72,14 +67,39 @@ public class VisualizationMediator
         return canvasController.isShowNonConnectedNodes();
     }
 
+    public boolean isLinksInNonActiveLayersShown()
+    {
+        return canvasController.isShowLinksInNonActiveLayer();
+    }
+
     public boolean isWhatIfAnalysisOn()
     {
         return netPlanControl.isWhatIfAnalysisOn();
     }
 
+    public boolean isLowerLayerPropagationShown()
+    {
+        return canvasController.isShowLowerLayerPropagation();
+    }
+
+    public boolean isUpperLayerPropagationShown()
+    {
+        return canvasController.isShowUpperLayerPropagation();
+    }
+
+    public boolean isCurrentLayerPropagationShown()
+    {
+        return canvasController.isShowThisLayerPropagation();
+    }
+
     public void setNodeNamesVisibility(final boolean showNodeNames)
     {
         canvasController.setShowNodeNames(showNodeNames);
+    }
+
+    public void setInterLayerLinksVisibility(boolean showInterLayerLinks)
+    {
+        canvasController.setShowInterLayerLinks(showInterLayerLinks);
     }
 
     public void setLinkLabelsVisibility(final boolean showLinkLabels)
@@ -92,20 +112,40 @@ public class VisualizationMediator
         canvasController.setShowNonConnectedNodes(showNonConnectedNodes);
     }
 
+    public void setLinksInNonActiveLayerVisibility(final boolean linksInNonActiveLayerVisibility)
+    {
+        canvasController.setShowLinksInNonActiveLayer(linksInNonActiveLayerVisibility);
+    }
+
     public void setWhatIfAnalysisState(final boolean state)
     {
         netPlanControl.setWhatIfAnalysisState(state);
     }
 
-    public ITableRowFilter getTableRowFilter()
+    public void setLowerLayerPropagationVisibility(final boolean lowerLayerPropagationVisibility)
     {
-        return netPlanControl.getTableRowFilter();
+        canvasController.setShowLowerLayerPropagation(lowerLayerPropagationVisibility);
+    }
+
+    public void setUpperLayerPropagationVisibility(final boolean upperLayerPropagationVisibility)
+    {
+        canvasController.setShowUpperLayerPropagation(upperLayerPropagationVisibility);
+    }
+
+    public void setCurrentLayerPropagationVisibility(final boolean currentLayerPropagationVisibility)
+    {
+        canvasController.setShowThisLayerPropagation(currentLayerPropagationVisibility);
     }
 
     public void updateTableRowFilter(@NotNull ITableRowFilter tableRowFilter)
     {
         if (tableRowFilter == null) throw new NullPointerException();
         netPlanControl.updateTableRowFilter(tableRowFilter);
+    }
+
+    public ITableRowFilter getTableRowFilter()
+    {
+        return netPlanControl.getTableRowFilter();
     }
 
     public Object getPickNavigationBackElement()
@@ -151,6 +191,11 @@ public class VisualizationMediator
     {
         if (layer == null) throw new NullPointerException();
         return layerController.isLayerVisible(layer);
+    }
+
+    public int getNumberOfLayers(final boolean considerNonVisible)
+    {
+        return considerNonVisible ? getNetPlan().getNumberOfLayers() : layerController.getNumberOfVisibleLayers();
     }
 
     public void show(@NotNull final Node node)
@@ -271,11 +316,6 @@ public class VisualizationMediator
     public void decreaseLinkSize()
     {
         canvasController.decreaseLinkSizeAll();
-    }
-
-    public int getNumberOfLayers(final boolean considerNonVisible)
-    {
-        return considerNonVisible ? getNetPlan().getNumberOfLayers() : layerController.getNumberOfVisibleLayers();
     }
 
 //    public static void checkNpToVsConsistency(VisualizationMediator vs, NetPlan np)
