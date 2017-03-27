@@ -47,14 +47,14 @@ public class VisualizationMediator
         return this.getNetPlan().isModifiable();
     }
 
-    public boolean isInterLayerLinksShown()
-    {
-        return canvasController.isShowInterLayerLinks();
-    }
-
     public void setInterLayerLinksVisibility(boolean showInterLayerLinks)
     {
         canvasController.setShowInterLayerLinks(showInterLayerLinks);
+    }
+
+    public boolean isInterLayerLinksShown()
+    {
+        return canvasController.isShowInterLayerLinks();
     }
 
     public boolean isNodeNamesShown()
@@ -62,19 +62,9 @@ public class VisualizationMediator
         return canvasController.isShowNodeNames();
     }
 
-    public void setNodeNamesVisibility(final boolean showNodeNames)
-    {
-        canvasController.setShowNodeNames(showNodeNames);
-    }
-
     public boolean isLinkLabelsShown()
     {
         return canvasController.isShowLinkLabels();
-    }
-
-    public void setLinkLabelsVisibility(final boolean showLinkLabels)
-    {
-        canvasController.setShowLinkLabels(showLinkLabels);
     }
 
     public boolean isNonConnectedNodesShown()
@@ -82,14 +72,24 @@ public class VisualizationMediator
         return canvasController.isShowNonConnectedNodes();
     }
 
-    public void setNonConnectedNodesVisibility(final boolean showNonConnectedNodes)
-    {
-        canvasController.setShowNonConnectedNodes(showNonConnectedNodes);
-    }
-
     public boolean isWhatIfAnalysisOn()
     {
         return netPlanControl.isWhatIfAnalysisOn();
+    }
+
+    public void setNodeNamesVisibility(final boolean showNodeNames)
+    {
+        canvasController.setShowNodeNames(showNodeNames);
+    }
+
+    public void setLinkLabelsVisibility(final boolean showLinkLabels)
+    {
+        canvasController.setShowLinkLabels(showLinkLabels);
+    }
+
+    public void setNonConnectedNodesVisibility(final boolean showNonConnectedNodes)
+    {
+        canvasController.setShowNonConnectedNodes(showNonConnectedNodes);
     }
 
     public void setWhatIfAnalysisState(final boolean state)
@@ -135,6 +135,18 @@ public class VisualizationMediator
         return canvasController.isVisible(link);
     }
 
+    public boolean isVisible(@NotNull final Node node)
+    {
+        if (node == null) throw new NullPointerException();
+        return !canvasController.isHidden(node);
+    }
+
+    public boolean isVisible(@NotNull final Link link)
+    {
+        if (link == null) throw new NullPointerException();
+        return !canvasController.isHidden(link);
+    }
+
     public boolean isVisible(@NotNull final NetworkLayer layer)
     {
         if (layer == null) throw new NullPointerException();
@@ -163,18 +175,6 @@ public class VisualizationMediator
     {
         if (link == null) throw new NullPointerException();
         canvasController.hide(link);
-    }
-
-    public boolean isHidden(@NotNull final Node node)
-    {
-        if (node == null) throw new NullPointerException();
-        return canvasController.isHidden(node);
-    }
-
-    public boolean isHidden(@NotNull final Link link)
-    {
-        if (link == null) throw new NullPointerException();
-        return canvasController.isHidden(link);
     }
 
     public int getLayerOrderPosition(@NotNull final NetworkLayer layer, final boolean considerNonVisible)
