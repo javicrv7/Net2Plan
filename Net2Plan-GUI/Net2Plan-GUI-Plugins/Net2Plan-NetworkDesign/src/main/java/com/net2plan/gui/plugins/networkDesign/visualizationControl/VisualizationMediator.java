@@ -4,6 +4,7 @@ import com.net2plan.gui.plugins.networkDesign.interfaces.ITableRowFilter;
 import com.net2plan.gui.plugins.networkDesign.topologyPane.jung.GUILink;
 import com.net2plan.gui.plugins.networkDesign.topologyPane.jung.GUINode;
 import com.net2plan.interfaces.networkDesign.*;
+import com.net2plan.utils.Pair;
 import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
 import org.apache.commons.collections15.BidiMap;
@@ -160,16 +161,6 @@ public class VisualizationMediator
     public ITableRowFilter getTableRowFilter()
     {
         return netPlanControl.getTableRowFilter();
-    }
-
-    public Object getPickNavigationBackElement()
-    {
-        return pickTimeLineManager.getPickNavigationBackElement();
-    }
-
-    public Object getPickNavigationForwardElement()
-    {
-        return pickTimeLineManager.getPickNavigationForwardElement();
     }
 
     public ImageIcon getIcon(@Nullable final URL url, int height, Color borderColor)
@@ -375,6 +366,32 @@ public class VisualizationMediator
     public void resetPickState()
     {
         elementSelector.resetPickedState();
+    }
+
+    public Object getPickNavigationBackElement()
+    {
+        return pickTimeLineManager.getPickNavigationBackElement();
+    }
+
+    public Object getPickNavigationForwardElement()
+    {
+        return pickTimeLineManager.getPickNavigationForwardElement();
+    }
+
+    public void addElementToPickTimeline(@NotNull final Object object)
+    {
+        if (object == null) throw new NullPointerException();
+        if (!(object instanceof NetworkElement) && !(object instanceof Pair)) throw new RuntimeException();
+
+        if (object instanceof NetworkElement)
+        {
+            pickTimeLineManager.addElement(this.getNetPlan(), (NetworkElement) object);
+        } else if (object instanceof Pair)
+        {
+            Pair aux = (Pair) object;
+            if (!(aux.getFirst() instanceof Demand) && !(aux.getSecond() instanceof Link)) throw new RuntimeException();
+            pickTimeLineManager.addElement(this.getNetPlan(), aux);
+        }
     }
 
 //    public static void checkNpToVsConsistency(VisualizationMediator vs, NetPlan np)
