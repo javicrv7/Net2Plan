@@ -4,7 +4,6 @@ import com.net2plan.gui.plugins.networkDesign.interfaces.ITableRowFilter;
 import com.net2plan.gui.plugins.networkDesign.topologyPane.jung.GUILink;
 import com.net2plan.gui.plugins.networkDesign.topologyPane.jung.GUINode;
 import com.net2plan.interfaces.networkDesign.*;
-import com.net2plan.internal.Constants;
 import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
 import org.apache.commons.collections15.BidiMap;
@@ -15,8 +14,6 @@ import java.net.URL;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import static com.net2plan.internal.Constants.*;
 
 public class VisualizationMediator
 {
@@ -370,9 +367,9 @@ public class VisualizationMediator
     }
 
     @Nullable
-    public NetworkElement getPickedElement()
+    public Object getPickedElement()
     {
-        return elementSelector.getPickedNetworkElement();
+        return elementSelector.getPickedElement();
     }
 
     public void resetPickState()

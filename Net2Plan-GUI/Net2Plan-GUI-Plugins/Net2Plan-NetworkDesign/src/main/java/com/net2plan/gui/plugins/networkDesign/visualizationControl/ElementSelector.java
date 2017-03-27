@@ -39,7 +39,6 @@ class ElementSelector
 {
     private final VisualizationMediator mediator;
 
-    private NetworkElementType pickedElementType;
     private NetworkElement pickedElement;
     private Pair<Demand, Link> pickedForwardingRule;
 
@@ -47,7 +46,6 @@ class ElementSelector
     {
         this.mediator = mediator;
 
-        this.pickedElementType = null;
         this.pickedElement = null;
         this.pickedForwardingRule = null;
     }
@@ -58,20 +56,9 @@ class ElementSelector
     }
 
     @Nullable
-    NetworkElementType getPickedElementType()
+    Object getPickedElement()
     {
-        return pickedElementType;
-    }
-
-    @Nullable
-    NetworkElement getPickedNetworkElement()
-    {
-        return pickedElement;
-    }
-
-    Pair<Demand, Link> getPickedForwardingRule()
-    {
-        return pickedForwardingRule;
+        return pickedElement != null ? pickedElement : pickedForwardingRule;
     }
 
     void pickElement(NetworkElement e)
@@ -90,7 +77,6 @@ class ElementSelector
 
     void resetPickedState()
     {
-        this.pickedElementType = null;
         this.pickedElement = null;
         this.pickedForwardingRule = null;
 
@@ -129,7 +115,6 @@ class ElementSelector
     private void pickDemand(Demand pickedDemand)
     {
         resetPickedState();
-        this.pickedElementType = NetworkElementType.DEMAND;
         this.pickedForwardingRule = null;
         this.pickedElement = pickedDemand;
         pickTimeLineManager.addElement(this.getNetPlan(), pickedDemand);
@@ -187,7 +172,6 @@ class ElementSelector
     private void pickSRG(SharedRiskGroup pickedSRG)
     {
         resetPickedState();
-        this.pickedElementType = NetworkElementType.SRG;
         this.pickedForwardingRule = null;
         this.pickedElement = pickedSRG;
         pickTimeLineManager.addElement(this.getNetPlan(), pickedSRG);
@@ -254,7 +238,6 @@ class ElementSelector
     private void pickMulticastDemand(MulticastDemand pickedDemand)
     {
         resetPickedState();
-        this.pickedElementType = NetworkElementType.MULTICAST_DEMAND;
         this.pickedForwardingRule = null;
         this.pickedElement = pickedDemand;
         pickTimeLineManager.addElement(this.getNetPlan(), pickedDemand);
@@ -305,7 +288,6 @@ class ElementSelector
     private void pickRoute(Route pickedRoute)
     {
         resetPickedState();
-        this.pickedElementType = NetworkElementType.ROUTE;
         this.pickedForwardingRule = null;
         this.pickedElement = pickedRoute;
         pickTimeLineManager.addElement(this.getNetPlan(), pickedRoute);
@@ -344,7 +326,6 @@ class ElementSelector
     private void pickMulticastTree(MulticastTree pickedTree)
     {
         resetPickedState();
-        this.pickedElementType = NetworkElementType.MULTICAST_TREE;
         this.pickedForwardingRule = null;
         this.pickedElement = pickedTree;
         pickTimeLineManager.addElement(this.getNetPlan(), pickedTree);
@@ -390,7 +371,6 @@ class ElementSelector
     private void pickLink(Link pickedLink)
     {
         resetPickedState();
-        this.pickedElementType = NetworkElementType.LINK;
         this.pickedForwardingRule = null;
         this.pickedElement = pickedLink;
         pickTimeLineManager.addElement(this.getNetPlan(), pickedLink);
@@ -438,7 +418,6 @@ class ElementSelector
     private void pickNode(Node pickedNode)
     {
         resetPickedState();
-        this.pickedElementType = NetworkElementType.NODE;
         this.pickedForwardingRule = null;
         this.pickedElement = pickedNode;
         pickTimeLineManager.addElement(this.getNetPlan(), pickedNode);
@@ -459,7 +438,6 @@ class ElementSelector
     private void pickResource(Resource pickedResource)
     {
         resetPickedState();
-        this.pickedElementType = NetworkElementType.RESOURCE;
         this.pickedForwardingRule = null;
         this.pickedElement = pickedResource;
         pickTimeLineManager.addElement(this.getNetPlan(), pickedResource);
@@ -474,7 +452,6 @@ class ElementSelector
     private void pickForwardingRule(Pair<Demand, Link> pickedFR)
     {
         resetPickedState();
-        this.pickedElementType = NetworkElementType.FORWARDING_RULE;
         this.pickedForwardingRule = pickedFR;
         this.pickedElement = null;
         pickTimeLineManager.addElement(this.getNetPlan(), pickedFR);
