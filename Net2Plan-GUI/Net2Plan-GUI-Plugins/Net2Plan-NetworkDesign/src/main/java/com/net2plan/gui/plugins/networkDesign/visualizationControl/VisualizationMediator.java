@@ -3,10 +3,8 @@ package com.net2plan.gui.plugins.networkDesign.visualizationControl;
 import com.net2plan.gui.plugins.networkDesign.interfaces.ITableRowFilter;
 import com.net2plan.gui.plugins.networkDesign.topologyPane.jung.GUILink;
 import com.net2plan.gui.plugins.networkDesign.topologyPane.jung.GUINode;
-import com.net2plan.interfaces.networkDesign.Link;
-import com.net2plan.interfaces.networkDesign.NetPlan;
-import com.net2plan.interfaces.networkDesign.NetworkLayer;
-import com.net2plan.interfaces.networkDesign.Node;
+import com.net2plan.interfaces.networkDesign.*;
+import com.net2plan.internal.Constants;
 import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
 import org.apache.commons.collections15.BidiMap;
@@ -17,6 +15,8 @@ import java.net.URL;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import static com.net2plan.internal.Constants.*;
 
 public class VisualizationMediator
 {
@@ -355,6 +355,29 @@ public class VisualizationMediator
     public void decreaseLinkSize()
     {
         canvasController.decreaseLinkSizeAll();
+    }
+
+    public boolean isElementPicked(@NotNull NetworkElement networkElement)
+    {
+        if (networkElement == null) throw new NullPointerException();
+        return elementSelector.isElementPicked(networkElement);
+    }
+
+    public void pickElement(@NotNull NetworkElement element)
+    {
+        if (element == null) throw new NullPointerException();
+        elementSelector.pickElement(element);
+    }
+
+    @Nullable
+    public NetworkElement getPickedElement()
+    {
+        return elementSelector.getPickedNetworkElement();
+    }
+
+    public void resetPickState()
+    {
+        elementSelector.resetPickedState();
     }
 
 //    public static void checkNpToVsConsistency(VisualizationMediator vs, NetPlan np)

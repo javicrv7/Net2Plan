@@ -22,6 +22,7 @@ import com.net2plan.interfaces.networkDesign.*;
 import com.net2plan.utils.Pair;
 import com.net2plan.utils.Triple;
 import com.sun.istack.internal.NotNull;
+import com.sun.istack.internal.Nullable;
 
 import java.awt.*;
 import java.util.*;
@@ -34,7 +35,7 @@ import static com.net2plan.internal.Constants.*;
  * @author Jorge San Emeterio Villalain
  * @date 24/03/17
  */
-public class ElementSelector
+class ElementSelector
 {
     private final VisualizationMediator mediator;
 
@@ -51,27 +52,72 @@ public class ElementSelector
         this.pickedForwardingRule = null;
     }
 
-    public boolean isElementPicked()
+    boolean isElementPicked(@NotNull NetworkElement element)
     {
-        return pickedElementType != null;
+        return element == pickedElement;
     }
 
-    public NetworkElementType getPickedElementType()
+    @Nullable
+    NetworkElementType getPickedElementType()
     {
         return pickedElementType;
     }
 
-    public NetworkElement getPickedNetworkElement()
+    @Nullable
+    NetworkElement getPickedNetworkElement()
     {
         return pickedElement;
     }
 
-    public Pair<Demand, Link> getPickedForwardingRule()
+    Pair<Demand, Link> getPickedForwardingRule()
     {
         return pickedForwardingRule;
     }
 
-    public void pickLayer(NetworkLayer pickedLayer)
+    void pickElement(NetworkElement e)
+    {
+        if (e instanceof NetworkLayer) pickLayer((NetworkLayer) e);
+        else if (e instanceof Node) pickNode((Node) e);
+        else if (e instanceof Link) pickLink((Link) e);
+        else if (e instanceof Demand) pickDemand((Demand) e);
+        else if (e instanceof Route) pickRoute((Route) e);
+        else if (e instanceof MulticastDemand) pickMulticastDemand((MulticastDemand) e);
+        else if (e instanceof MulticastTree) pickMulticastTree((MulticastTree) e);
+        else if (e instanceof Resource) pickResource((Resource) e);
+        else if (e instanceof SharedRiskGroup) pickSRG((SharedRiskGroup) e);
+        else throw new RuntimeException();
+    }
+
+    void resetPickedState()
+    {
+        this.pickedElementType = null;
+        this.pickedElement = null;
+        this.pickedForwardingRule = null;
+
+        for (GUINode n : getCanvasAllGUINodes())
+        {
+            n.setBorderPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR);
+            n.setFillPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR);
+        }
+        for (GUILink e : getCanvasAllGUILinks(true, false))
+        {
+            e.setHasArrow(VisualizationConstants.DEFAULT_REGGUILINK_HASARROW);
+            setCurrentDefaultEdgeStroke(e, VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE_ACTIVELAYER, VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE);
+            final boolean isDown = e.getAssociatedNetPlanLink().isDown();
+            final Paint color = isDown ? VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_FAILED : VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR;
+            e.setEdgeDrawPaint(color);
+            e.setShownSeparated(isDown);
+        }
+        for (GUILink e : getCanvasAllGUILinks(false, true))
+        {
+            e.setHasArrow(VisualizationConstants.DEFAULT_INTRANODEGUILINK_HASARROW);
+            setCurrentDefaultEdgeStroke(e, VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE, VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE);
+            e.setEdgeDrawPaint(VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGEDRAWCOLOR);
+            e.setShownSeparated(false);
+        }
+    }
+
+    private void pickLayer(NetworkLayer pickedLayer)
     {
         resetPickedState();
         this.pickedElementType = NetworkElementType.LAYER;
@@ -80,7 +126,7 @@ public class ElementSelector
         pickTimeLineManager.addElement(this.getNetPlan(), pickedLayer);
     }
 
-    public void pickDemand(Demand pickedDemand)
+    private void pickDemand(Demand pickedDemand)
     {
         resetPickedState();
         this.pickedElementType = NetworkElementType.DEMAND;
@@ -138,7 +184,7 @@ public class ElementSelector
         }
     }
 
-    public void pickSRG(SharedRiskGroup pickedSRG)
+    private void pickSRG(SharedRiskGroup pickedSRG)
     {
         resetPickedState();
         this.pickedElementType = NetworkElementType.SRG;
@@ -205,7 +251,7 @@ public class ElementSelector
         }
     }
 
-    public void pickMulticastDemand(MulticastDemand pickedDemand)
+    private void pickMulticastDemand(MulticastDemand pickedDemand)
     {
         resetPickedState();
         this.pickedElementType = NetworkElementType.MULTICAST_DEMAND;
@@ -256,7 +302,7 @@ public class ElementSelector
         }
     }
 
-    public void pickRoute(Route pickedRoute)
+    private void pickRoute(Route pickedRoute)
     {
         resetPickedState();
         this.pickedElementType = NetworkElementType.ROUTE;
@@ -295,7 +341,7 @@ public class ElementSelector
         }
     }
 
-    public void pickMulticastTree(MulticastTree pickedTree)
+    private void pickMulticastTree(MulticastTree pickedTree)
     {
         resetPickedState();
         this.pickedElementType = NetworkElementType.MULTICAST_TREE;
@@ -341,7 +387,7 @@ public class ElementSelector
         }
     }
 
-    public void pickLink(Link pickedLink)
+    private void pickLink(Link pickedLink)
     {
         resetPickedState();
         this.pickedElementType = NetworkElementType.LINK;
@@ -377,7 +423,7 @@ public class ElementSelector
             drawColateralLinks(ipg.getLinksInGraph(), VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
             drawDownPropagationInterLayerLinks(ipg.getLinksInGraph(), VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_PICKED);
         }
-		/* Picked link the last, so overrides the rest */
+        /* Picked link the last, so overrides the rest */
         if (isLinkLayerVisibleInTheCanvas)
         {
             final GUILink gl = getCanvasAssociatedGUILink(pickedLink);
@@ -389,7 +435,7 @@ public class ElementSelector
         }
     }
 
-    public void pickNode(Node pickedNode)
+    private void pickNode(Node pickedNode)
     {
         resetPickedState();
         this.pickedElementType = NetworkElementType.NODE;
@@ -410,7 +456,7 @@ public class ElementSelector
         }
     }
 
-    public void pickResource(Resource pickedResource)
+    private void pickResource(Resource pickedResource)
     {
         resetPickedState();
         this.pickedElementType = NetworkElementType.RESOURCE;
@@ -425,7 +471,7 @@ public class ElementSelector
         }
     }
 
-    public void pickForwardingRule(Pair<Demand, Link> pickedFR)
+    private void pickForwardingRule(Pair<Demand, Link> pickedFR)
     {
         resetPickedState();
         this.pickedElementType = NetworkElementType.FORWARDING_RULE;
@@ -472,48 +518,6 @@ public class ElementSelector
             gl.getOriginNode().setFillPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_ORIGINFLOW);
             gl.getDestinationNode().setBorderPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_ENDFLOW);
             gl.getDestinationNode().setFillPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR_ENDFLOW);
-        }
-    }
-
-    public void pickElement(NetworkElement e)
-    {
-        if (e instanceof Node) pickNode((Node) e);
-        else if (e instanceof Link) pickLink((Link) e);
-        else if (e instanceof Demand) pickDemand((Demand) e);
-        else if (e instanceof Route) pickRoute((Route) e);
-        else if (e instanceof MulticastDemand) pickMulticastDemand((MulticastDemand) e);
-        else if (e instanceof MulticastTree) pickMulticastTree((MulticastTree) e);
-        else if (e instanceof Resource) pickResource((Resource) e);
-        else if (e instanceof SharedRiskGroup) pickSRG((SharedRiskGroup) e);
-        else throw new RuntimeException();
-    }
-
-    public void resetPickedState()
-    {
-        this.pickedElementType = null;
-        this.pickedElement = null;
-        this.pickedForwardingRule = null;
-
-        for (GUINode n : getCanvasAllGUINodes())
-        {
-            n.setBorderPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR);
-            n.setFillPaint(VisualizationConstants.DEFAULT_GUINODE_COLOR);
-        }
-        for (GUILink e : getCanvasAllGUILinks(true, false))
-        {
-            e.setHasArrow(VisualizationConstants.DEFAULT_REGGUILINK_HASARROW);
-            setCurrentDefaultEdgeStroke(e, VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE_ACTIVELAYER, VisualizationConstants.DEFAULT_REGGUILINK_EDGESTROKE);
-            final boolean isDown = e.getAssociatedNetPlanLink().isDown();
-            final Paint color = isDown ? VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR_FAILED : VisualizationConstants.DEFAULT_REGGUILINK_EDGECOLOR;
-            e.setEdgeDrawPaint(color);
-            e.setShownSeparated(isDown);
-        }
-        for (GUILink e : getCanvasAllGUILinks(false, true))
-        {
-            e.setHasArrow(VisualizationConstants.DEFAULT_INTRANODEGUILINK_HASARROW);
-            setCurrentDefaultEdgeStroke(e, VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE, VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGESTROKE);
-            e.setEdgeDrawPaint(VisualizationConstants.DEFAULT_INTRANODEGUILINK_EDGEDRAWCOLOR);
-            e.setShownSeparated(false);
         }
     }
 }
